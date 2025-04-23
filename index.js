@@ -31,12 +31,17 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+// app.options('*', cors(corsOptions));
 
 app.use('/', authRoutes);
 app.use('/api', reportRoutes);
 app.use('/api', userRoutes);
 app.use('/api', merchantAccountList);
 app.use('/api', googleSheet);
+
+app.get('/test', (req, res) => {
+  res.json({ message: 'Up and running' });
+});
 
 app.listen(port, () => {
   console.log(`App running at ${process.env.PRODUCTION} - ${port}`);

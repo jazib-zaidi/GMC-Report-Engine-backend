@@ -32,7 +32,7 @@ exports.handleOAuthCallback = async (req, res) => {
       }),
     ]);
 
-    res.redirect(`${process.env.FRONTEND_URL}/`);
+    res.redirect(`${process.env.FRONTEND_URL}`);
   } catch (err) {
     console.error('OAuth Callback Error:', err);
     res.status(500).send('Error fetching GMC account info.');
