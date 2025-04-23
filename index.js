@@ -18,7 +18,11 @@ app.use(
   session({
     secret: process.env.GOOGLE_CLIENT_ID,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    cookie: {
+      secure: true,
+      sameSite: 'none',
+    },
   })
 );
 
