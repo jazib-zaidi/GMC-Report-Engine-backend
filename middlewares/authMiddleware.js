@@ -15,7 +15,7 @@ const authMiddleware = (req, res, next) => {
     next();
   } catch (err) {
     clearAllCookies(res);
-    res.redirect(`${process.env.FRONTEND_URL}/`);
+
     return res
       .status(401)
       .json({ error: 'Unauthorized. Token invalid or expired.' });
