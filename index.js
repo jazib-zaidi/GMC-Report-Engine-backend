@@ -25,8 +25,6 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-const cors = require('cors');
-
 const corsOptions = {
   origin: 'https://gmc-report-engine-frontend.vercel.app',
   credentials: true,
