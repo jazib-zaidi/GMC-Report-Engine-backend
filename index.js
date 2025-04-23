@@ -26,11 +26,14 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const corsOptions = {
-  origin: process.env.FRONTEND_URL,
+  origin: function (origin, callback) {
+    callback(null, origin); // Reflects the origin back
+  },
   credentials: true,
 };
 
 app.use(cors(corsOptions));
+
 // app.options('*', cors(corsOptions));
 
 app.use('/', authRoutes);
