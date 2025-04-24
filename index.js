@@ -13,6 +13,7 @@ const port = 3000;
 const app = express();
 app.use(cookieParser());
 const session = require('express-session');
+const authMiddleware = require('./middlewares/authMiddleware');
 
 app.use(
   session({
@@ -44,7 +45,7 @@ app.use('/api', userRoutes);
 app.use('/api', merchantAccountList);
 app.use('/api', googleSheet);
 
-app.get('/test', (req, res) => {
+app.get('/test', authMiddleware, (req, res) => {
   res.json({ message: 'Up and running' });
 });
 

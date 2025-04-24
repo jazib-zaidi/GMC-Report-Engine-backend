@@ -5,7 +5,7 @@ const authMiddleware = (req, res, next) => {
 
   if (!token) {
     clearAllCookies(res);
-    res.redirect(`${process.env.FRONTEND_URL}/`);
+
     return res.status(401).json({ error: 'Unauthorized. Token missing.' });
   }
 
