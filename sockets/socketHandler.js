@@ -11,9 +11,9 @@ function initSocket(io) {
 
     socket.on('startGeneration', async (data) => {
       try {
+        socket.emit('generationComplete', { data: data });
         const { data: inputData, token } = data;
         const decoded = jwt.verify(token.token, process.env.JWT_TOKEN);
-        socket.emit('generationComplete', { data: token });
 
         console.log(inputData);
         console.log(decoded);
