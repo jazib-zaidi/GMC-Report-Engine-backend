@@ -5,9 +5,7 @@ const authMiddleware = (req, res, next) => {
 
   // clearAllCookies(res);
 
-  return res
-    .status(401)
-    .json({ error: 'Unauthorized. Token missing.', token: token });
+  return res.status(200).json({ error: 'Unauthorized.', token: token });
   // }
 
   try {
