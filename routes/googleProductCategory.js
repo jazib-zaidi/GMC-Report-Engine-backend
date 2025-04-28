@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
-const { googleProductCategory } = require('../controllers/merchantAccountList');
+const {
+  googleProductCategory,
+} = require('../controllers/googleProductCategory');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 router.get(

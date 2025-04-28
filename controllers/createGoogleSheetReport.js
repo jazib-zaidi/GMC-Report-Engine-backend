@@ -3,7 +3,9 @@ const { oauth2Client, google } = require('../utils/googleClient');
 exports.createGoogleSheetReport = async (req, res) => {
   try {
     const { tokens } = req.token;
+
     const { exportData, reportName, summaryData, selectedDateRange } = req.body;
+    console.log(exportData);
     if (!tokens) {
       return res.status(401).send('No tokens found');
     }

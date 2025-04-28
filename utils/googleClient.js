@@ -12,5 +12,6 @@ module.exports = {
   SCOPES: [
     'https://www.googleapis.com/auth/content',
     'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/business.manage',
   ],
 };

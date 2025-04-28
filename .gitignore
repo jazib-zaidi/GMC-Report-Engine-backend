@@ -17,6 +17,8 @@ pids/
 # Environment variables
 .env
 .env.*
+.envDev
+.envDev.*
 
 # Build output
 dist/
