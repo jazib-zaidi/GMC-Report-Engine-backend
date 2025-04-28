@@ -43,8 +43,6 @@ exports.handleOAuthCallback = async (req, res) => {
       }),
     ]);
 
-    res.json({ message: 'Login successful' });
-
     res.redirect(`${process.env.FRONTEND_URL}`);
   } catch (err) {
     console.error('OAuth Callback Error:', err);
