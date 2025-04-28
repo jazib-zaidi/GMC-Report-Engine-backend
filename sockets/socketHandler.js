@@ -11,18 +11,10 @@ function initSocket(io) {
 
     socket.on('startGeneration', async (data) => {
       try {
-        socket.emit('generationComplete', { data: 'ok' });
-        const tokens = socket.request.headers.cookie;
-        const token =
-          tokens &&
-          tokens
-            .split(';')
-            .find((c) => c.trim().startsWith('token='))
-            .split('=')[1];
+        const { data: inputData, token } = data;
+        const decoded = jwt.verify(token.token, process.env.JWT_TOKEN);
+        socket.emit('generationComplete', { data: token });
 
-        const decoded = jwt.verify(token, process.env.JWT_TOKEN);
-
-        const { data: inputData } = data;
         console.log(inputData);
         console.log(decoded);
         oauth2Client.setCredentials(decoded.tokens);
