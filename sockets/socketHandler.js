@@ -11,12 +11,12 @@ function initSocket(io) {
 
     socket.on('startGeneration', async (data) => {
       try {
-        socket.emit('generationComplete', { data: data });
         const { data: inputData, token } = data;
-        const decoded = jwt.verify(token.token, process.env.JWT_TOKEN);
+        const decoded = jwt.verify(token, process.env.JWT_TOKEN);
 
         console.log(inputData);
         console.log(decoded);
+        socket.emit('generationComplete', { data: decoded });
         oauth2Client.setCredentials(decoded.tokens);
 
         const sheets = google.sheets({ version: 'v4', auth: oauth2Client });
