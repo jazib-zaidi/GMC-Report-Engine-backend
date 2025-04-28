@@ -1,13 +1,14 @@
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
-  const token = req.cookies.token;
+  const token = req.headers.cookie;
 
-  if (!token) {
-    clearAllCookies(res);
+  // clearAllCookies(res);
 
-    return res.status(401).json({ error: 'Unauthorized. Token missing.' });
-  }
+  return res
+    .status(401)
+    .json({ error: 'Unauthorized. Token missing.', token: token });
+  // }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_TOKEN);
