@@ -5,7 +5,7 @@ exports.createGoogleSheetReport = async (req, res) => {
     const { tokens } = req.token;
 
     const { exportData, reportName, summaryData, selectedDateRange } = req.body;
-    console.log(exportData);
+
     if (!tokens) {
       return res.status(401).send('No tokens found');
     }
@@ -124,6 +124,7 @@ exports.createGoogleSheetReport = async (req, res) => {
     const allProductData = [product.headers, ...formatSheetData(product.data)];
     const brandSheetData = [brand.headers, ...formatBrandSheetData(brand.data)];
     const productSheetData = [
+      [],
       ['Report timeframe', 'Compared to'],
 
       [
@@ -244,11 +245,23 @@ exports.createGoogleSheetReport = async (req, res) => {
       },
     });
 
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: 'Dashboard!A1',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [
+          [
+            `=IMAGE("https://app.feedops.com/packs/media/feed_ops/feed_ops_logo-906e0f13.png", 1)`,
+          ],
+        ],
+      },
+    });
+
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
         requests: [
-          // 🔹 Bold: Timeframe Header
           {
             repeatCell: {
               range: {
@@ -439,7 +452,7 @@ exports.createGoogleSheetReport = async (req, res) => {
       url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`,
     });
   } catch (err) {
-    console.error(err.response?.data || err.message);
+    console.error(err);
     res.status(500).send('Error creating multi-sheet spreadsheet');
   }
 };

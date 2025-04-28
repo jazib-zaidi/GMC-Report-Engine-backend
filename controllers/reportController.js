@@ -13,6 +13,8 @@ exports.fetchReports = async (req, res) => {
 
     oauth2Client.setCredentials(tokens);
     const content = google.content({ version: 'v2.1', auth: oauth2Client });
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
     const fetchAllDataRecursively = async (
       gmcAccountId,
       query,
@@ -20,6 +22,8 @@ exports.fetchReports = async (req, res) => {
       allResults = [],
       count = 0
     ) => {
+      if (count > 0) await sleep(300);
+
       const response = await content.reports.search({
         merchantId: gmcAccountId,
         requestBody: {
@@ -43,6 +47,7 @@ exports.fetchReports = async (req, res) => {
 
       return allResults;
     };
+
     //https://developers.google.com/shopping-content/reference/rest/v2.1/reports/search#Segments
     //https://developers.google.com/shopping-content/guides/reports/fields?hl=en
 
@@ -93,7 +98,6 @@ exports.fetchReports = async (req, res) => {
       };
 
       if (filter?.selectedAttribute) {
-        console.log(combinedFilter());
         currentQuery += ` AND ${combinedFilter()}`;
         previousQuery += ` AND ${combinedFilter()}`;
       }
@@ -140,7 +144,6 @@ exports.fetchReports = async (req, res) => {
       };
 
       if (filter?.selectedAttribute) {
-        console.log(combinedFilter());
         currentQuery += ` AND ${combinedFilter()}`;
         previousQuery += ` AND ${combinedFilter()}`;
       }
@@ -192,7 +195,6 @@ exports.fetchReports = async (req, res) => {
       };
 
       if (filter?.selectedAttribute) {
-        console.log(combinedFilter());
         currentQuery += ` AND ${combinedFilter()}`;
         previousQuery += ` AND ${combinedFilter()}`;
       }
@@ -353,7 +355,6 @@ exports.fetchReports = async (req, res) => {
     //     pageSize: 5000,
     //   },
     // });
-    // console.log('newData', newData.data.results);
 
     res.json({
       current: {

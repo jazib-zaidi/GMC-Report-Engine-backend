@@ -13,10 +13,6 @@ const getProductCategory = async (merchantId, offerId) => {
 
     // Check if no product category was found
     if (!productCategory) {
-      console.log(
-        `No product category found for Merchant ID: ${merchantId} and Offer ID: ${offerId}`
-      );
-
       // Return a default response or empty category if no result found
       return {
         categoryL1: 'No Category',

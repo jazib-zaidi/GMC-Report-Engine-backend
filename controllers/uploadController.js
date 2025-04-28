@@ -32,8 +32,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 exports.uploadXlsxFile = async (req, res) => {
   const gmcAccountId = req.query.gmcAccountId;
-  console.log('gmcAccountId:', gmcAccountId);
-  let c = 242256086;
+
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
@@ -50,7 +49,7 @@ exports.uploadXlsxFile = async (req, res) => {
       const itemId = product['Item ID'];
       try {
         const res = await getProductCategory(gmcAccountId, itemId);
-        console.log(i, res.categoryL1);
+
         product['Google Product Category 1'] = res.categoryL1 || 'Empty';
         product['Google Product Category 2'] = res.categoryL2 || 'Empty';
         product['Google Product Category 3'] = res.categoryL3 || 'Empty';

@@ -43,10 +43,9 @@ async function generateKeywords(socket, rows) {
   let totalCost = 0;
   let totalTokens = 0;
 
-  console.log('generateKeywords', rows);
   for (const row of rows) {
     const prompt = buildPrompt(row);
-    console.log(i);
+
     i++;
     try {
       const res = await openai.chat.completions.create({
@@ -88,11 +87,10 @@ async function generateKeywords(socket, rows) {
       };
 
       output.push(result);
-      console.log('test');
+
       socket.emit('keywordGenerated', result);
-      console.log(i);
+
       if (rows.length <= i) {
-        console.log(i);
       }
     } catch (err) {
       socket.emit('error', `Failed: ${row.Title}`);
@@ -136,7 +134,6 @@ async function writeDataToSheet(
         values: sheetData,
       },
     });
-    console.log(`https://docs.google.com/spreadsheets/d/${spreadsheetId}`);
 
     socket.emit('googleSheet', {
       message: 'Focus keywords sheet created successfully!',

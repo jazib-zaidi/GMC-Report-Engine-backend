@@ -27,7 +27,7 @@ exports.googleProductCategory = async (req, res) => {
       try {
         // Introduce a delay before making the API request
         await new Promise((resolve) => setTimeout(resolve, delay));
-        console.log(gmcAccountId);
+
         const response = await content.reports.search({
           merchantId: gmcAccountId,
           requestBody: {
@@ -36,13 +36,11 @@ exports.googleProductCategory = async (req, res) => {
             pageToken: pageToken || undefined,
           },
         });
-        console.log(response.data?.results);
 
         allResults = allResults.concat(response.data?.results || []);
 
         // If there is a nextPageToken, continue fetching recursively
         if (response.data?.nextPageToken) {
-          console.log('Next page token:', response.data.nextPageToken);
           return fetchAllDataRecursively(
             gmcAccountId,
             query,
