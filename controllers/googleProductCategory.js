@@ -5,9 +5,15 @@ exports.googleProductCategory = async (req, res) => {
   try {
     const gmcAccountId = req.query.gmcAccountId;
     const { tokens } = req.token;
-
+    let query = { merchantId: gmcAccountId };
+    const productCategory = await GoogleProductCategory.findOne(query);
     oauth2Client.setCredentials(tokens);
 
+    if (productCategory?.offerId) {
+      return res.json({
+        message: 'Google Product Categories saved successfully.',
+      });
+    }
     const content = google.content({ version: 'v2.1', auth: oauth2Client });
 
     // Recursive function to fetch all pages of product data
@@ -21,7 +27,7 @@ exports.googleProductCategory = async (req, res) => {
       try {
         // Introduce a delay before making the API request
         await new Promise((resolve) => setTimeout(resolve, delay));
-
+        console.log(gmcAccountId);
         const response = await content.reports.search({
           merchantId: gmcAccountId,
           requestBody: {
@@ -30,8 +36,8 @@ exports.googleProductCategory = async (req, res) => {
             pageToken: pageToken || undefined,
           },
         });
+        console.log(response.data?.results);
 
-        // Concatenate the current results to the accumulated results
         allResults = allResults.concat(response.data?.results || []);
 
         // If there is a nextPageToken, continue fetching recursively
@@ -77,8 +83,10 @@ FROM ProductView
 
     await GoogleProductCategory.insertMany(formattedCategories);
 
-    // Send success response
-    res.json({ message: 'Google Product Categories saved successfully.' });
+    res.json({
+      message: 'Google Product Categories saved successfully.',
+      formattedCategories,
+    });
   } catch (err) {
     console.error('Error in googleProductCategory handler:', err);
     res.status(500).json({

@@ -31,9 +31,9 @@ exports.uploadMiddleware = upload.single('file');
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 exports.uploadXlsxFile = async (req, res) => {
-  const { tokens } = req.token;
-  const gmcAccountId = 238564716;
-
+  const gmcAccountId = req.query.gmcAccountId;
+  console.log('gmcAccountId:', gmcAccountId);
+  let c = 242256086;
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
