@@ -15,11 +15,21 @@ exports.handleOAuthCallback = async (req, res) => {
     const { code } = req.query;
     const { tokens } = await oauth2Client.getToken(code);
 
+    if (!tokens) {
+      return res.status(400).json({ message: 'No tokens received', code });
+    }
+
     req.session.tokens = tokens;
 
-    const payload = {
-      tokens,
-    };
+    const payload = { tokens };
+
+    // Make sure secret exists
+    if (!process.env.JWT_TOKEN) {
+      console.error('JWT_TOKEN env variable not set');
+      return res
+        .status(500)
+        .json({ message: 'Server error', token: process.env.JWT_TOKEN });
+    }
 
     const token = jwt.sign(payload, process.env.JWT_TOKEN, { expiresIn: '7d' });
 
@@ -32,6 +42,8 @@ exports.handleOAuthCallback = async (req, res) => {
         path: '/',
       }),
     ]);
+
+    res.json({ message: 'Login successful' });
 
     res.redirect(`${process.env.FRONTEND_URL}`);
   } catch (err) {
