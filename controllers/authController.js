@@ -26,7 +26,7 @@ exports.handleOAuthCallback = async (req, res) => {
     res.setHeader('Set-Cookie', [
       cookie.serialize('token', token, {
         httpOnly: true,
-        secure: true,
+        secure: false,
         sameSite: 'none',
         maxAge: 60 * 60 * 24 * 7,
         path: '/',
