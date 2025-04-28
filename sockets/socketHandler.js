@@ -11,6 +11,7 @@ function initSocket(io) {
 
     socket.on('startGeneration', async (data) => {
       try {
+        socket.emit('generationComplete', { data: 'ok' });
         const tokens = socket.request.headers.cookie;
         const token =
           tokens &&
@@ -19,7 +20,6 @@ function initSocket(io) {
             .find((c) => c.trim().startsWith('token='))
             .split('=')[1];
 
-        // console.log(token);
         const decoded = jwt.verify(token, process.env.JWT_TOKEN);
 
         const { data: inputData } = data;
@@ -51,7 +51,6 @@ function initSocket(io) {
         // Generate the focus keywords
         const result = await generateKeywords(socket, inputData);
         console.log('✅ Keywords generated:', result);
-        socket.emit('generationComplete', { data: 'ok' });
 
         await writeDataToSheet(
           sheets,
