@@ -11,6 +11,7 @@ exports.createGoogleSheetReport = async (req, res) => {
       return res.status(401).send('No tokens found');
     }
     oauth2Client.setCredentials(tokens);
+
     function getTableHeaders(dataArray) {
       if (!Array.isArray(dataArray)) return [];
 
@@ -24,9 +25,13 @@ exports.createGoogleSheetReport = async (req, res) => {
 
       return Array.from(headers);
     }
-    const sheets = google.sheets({ version: 'v4', auth: oauth2Client });
-    console.log(previousDateRange);
-    console.log(selectedDateRange);
+
+    const sheets = google.sheets({
+      version: 'v4',
+      auth: oauth2Client,
+      timeout: 10000, // 10 seconds
+    });
+
     // const product = exportData.product;
     // const { brand } = exportData;
     let newsheetDataLength = [{ row: 0, column: 0 }];
@@ -65,6 +70,17 @@ exports.createGoogleSheetReport = async (req, res) => {
       ...googleProductCategory,
     ];
 
+    function formatPercent(value) {
+      if (
+        value === 'N/A' ||
+        value === 'null' ||
+        value === null ||
+        value === undefined
+      ) {
+        return value;
+      }
+      return `${value}%`;
+    }
     const createResponse = await sheets.spreadsheets.create({
       resource: {
         properties: {
@@ -83,37 +99,37 @@ exports.createGoogleSheetReport = async (req, res) => {
         item.title,
         item.currentClicks,
         item.previousClicks,
-        item.clicksChangePct,
+        formatPercent(item.clicksChangePct),
         item.clicksChangeNumber,
         item.currentImpressions,
         item.previousImpressions,
-        item.impressionsChangePct,
+        formatPercent(item.impressionsChangePct),
         item.impressionsChangeNumber,
       ]);
       return formattedData;
     }
 
     const brandHeader = [
-      'brand',
-      'currentClicks',
-      'previousClicks',
-      'clicksChangePct',
-      'clicksChangeNumber',
-      'currentImpressions',
-      'previousImpressions',
-      'impressionsChangePct',
-      'impressionsChangeNumber',
+      'Brand',
+      'Current Clicks',
+      'Previous Clicks',
+      'Clicks Change %',
+      'Clicks Change Number',
+      'Current Impressions',
+      'Previous Impressions',
+      'Impressions Change %',
+      'Impressions Change Number',
     ];
     function formatBrandSheetData(data) {
       const formattedData = data.map((item) => [
         item.segment,
         item.currentClicks,
         item.previousClicks,
-        item.clicksChangePct,
+        formatPercent(item.clicksChangePct),
         item.clicksChangeNumber,
         item.currentImpressions,
         item.previousImpressions,
-        item.impressionsChangePct,
+        formatPercent(item.impressionsChangePct),
         item.impressionsChangeNumber,
       ]);
       return formattedData;
@@ -124,11 +140,11 @@ exports.createGoogleSheetReport = async (req, res) => {
         item[type],
         item.currentClicks,
         item.previousClicks,
-        item.clicksChangePct,
+        formatPercent(item.clicksChangePct),
         item.clicksChangeNumber,
         item.currentImpressions,
         item.previousImpressions,
-        item.impressionsChangePct,
+        formatPercent(item.impressionsChangePct),
         item.impressionsChangeNumber,
       ]);
       return formattedData;
@@ -147,8 +163,34 @@ exports.createGoogleSheetReport = async (req, res) => {
       return `${formatDate(startDate)} – ${formatDate(endDate)}`;
     }
 
+    const getPreviousDateRange = (selectedDateRange, previousDateRange) => {
+      if (previousDateRange) return previousDateRange;
+
+      const oneYearEarlier = (dateStr) => {
+        const date = new Date(dateStr);
+        date.setFullYear(date.getFullYear() - 1);
+        return date.toISOString().split('T')[0]; // returns 'YYYY-MM-DD'
+      };
+
+      return {
+        startDate: oneYearEarlier(selectedDateRange.startDate),
+        endDate: oneYearEarlier(selectedDateRange.endDate),
+      };
+    };
+
     const allProductDataWithImpressions = [
-      allCohortAnalysisDataWithImpressions,
+      [
+        'Item ID',
+        'Title',
+        'Current Clicks',
+        'Previous Clicks',
+        'Clicks Change %',
+        'Clicks Change Number',
+        'Current Impressions',
+        'Previous Impressions',
+        'Impressions Change %',
+        'Impressions Change Number',
+      ],
       ...formatSheetData(
         reportData.allProductDataWithImpressions
           .allCohortAnalysisDataWithImpressions
@@ -156,7 +198,19 @@ exports.createGoogleSheetReport = async (req, res) => {
     ];
 
     const allProductData = [
-      allCohortAnalysisDataWithImpressions,
+      [
+        'Item ID',
+        'Title',
+        'Current Clicks',
+        'Previous Clicks',
+        'Clicks Change %',
+        'Clicks Change Number',
+        'Current Impressions',
+        'Previous Impressions',
+        'Impressions Change %',
+        'Impressions Change Number',
+      ],
+
       ...formatSheetData(reportData.allProductData.cohortAnalysisData),
     ];
 
@@ -167,10 +221,14 @@ exports.createGoogleSheetReport = async (req, res) => {
       ),
     ];
     const productSheetData = [
-      [],
       ['Report timeframe', 'Compared to'],
 
-      [formatDateRange(selectedDateRange), formatDateRange(previousDateRange)],
+      [
+        formatDateRange(selectedDateRange),
+        formatDateRange(
+          getPreviousDateRange(selectedDateRange, previousDateRange)
+        ),
+      ],
 
       [],
 
@@ -179,7 +237,9 @@ exports.createGoogleSheetReport = async (req, res) => {
       ['Actual Impressions'],
       [
         formatDateRange(selectedDateRange),
-        formatDateRange(previousDateRange),
+        formatDateRange(
+          getPreviousDateRange(selectedDateRange, previousDateRange)
+        ),
         'Change',
         'Change %',
       ],
@@ -192,19 +252,23 @@ exports.createGoogleSheetReport = async (req, res) => {
           .totalCurrentMetricsWithImpressions.impressions -
           reportData.allProductDataWithImpressions
             .totalPreviousMetricsWithImpressions.impressions,
-        ((reportData.allProductDataWithImpressions
-          .totalCurrentMetricsWithImpressions.impressions -
-          reportData.allProductDataWithImpressions
-            .totalPreviousMetricsWithImpressions.impressions) /
-          reportData.allProductDataWithImpressions
-            .totalPreviousMetricsWithImpressions.impressions) *
-          100,
+        (
+          ((reportData.allProductDataWithImpressions
+            .totalCurrentMetricsWithImpressions.impressions -
+            reportData.allProductDataWithImpressions
+              .totalPreviousMetricsWithImpressions.impressions) /
+            reportData.allProductDataWithImpressions
+              .totalPreviousMetricsWithImpressions.impressions) *
+          100
+        )?.toFixed(2) + ' %',
       ],
       [],
       ['Actual Clicks'],
       [
         formatDateRange(selectedDateRange),
-        formatDateRange(previousDateRange),
+        formatDateRange(
+          getPreviousDateRange(selectedDateRange, previousDateRange)
+        ),
         'Change',
         'Change %',
       ],
@@ -217,13 +281,15 @@ exports.createGoogleSheetReport = async (req, res) => {
           .totalCurrentMetricsWithImpressions.clicks -
           reportData.allProductDataWithImpressions
             .totalPreviousMetricsWithImpressions.clicks,
-        ((reportData.allProductDataWithImpressions
-          .totalCurrentMetricsWithImpressions.clicks -
-          reportData.allProductDataWithImpressions
-            .totalPreviousMetricsWithImpressions.clicks) /
-          reportData.allProductDataWithImpressions
-            .totalPreviousMetricsWithImpressions.clicks) *
-          100,
+        (
+          ((reportData.allProductDataWithImpressions
+            .totalCurrentMetricsWithImpressions.clicks -
+            reportData.allProductDataWithImpressions
+              .totalPreviousMetricsWithImpressions.clicks) /
+            reportData.allProductDataWithImpressions
+              .totalPreviousMetricsWithImpressions.clicks) *
+          100
+        )?.toFixed(2) + ' %',
       ],
     ];
 
@@ -306,19 +372,6 @@ exports.createGoogleSheetReport = async (req, res) => {
       },
     });
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: 'Dashboard!A1',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [
-          [
-            `=IMAGE("https://app.feedops.com/packs/media/feed_ops/feed_ops_logo-906e0f13.png", 1)`,
-          ],
-        ],
-      },
-    });
-
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
@@ -340,12 +393,52 @@ exports.createGoogleSheetReport = async (req, res) => {
                     green: 1,
                     blue: 1,
                   },
+                  horizontalAlignment: 'CENTER',
+                  verticalAlignment: 'MIDDLE',
                 },
               },
-              fields: 'userEnteredFormat.textFormat.bold',
+              fields:
+                'userEnteredFormat(textFormat,horizontalAlignment,verticalAlignment,backgroundColor)',
             },
           },
-
+          {
+            repeatCell: {
+              range: {
+                sheetId,
+                startRowIndex: 1,
+                endRowIndex: 2,
+                startColumnIndex: 0,
+                endColumnIndex: 2,
+              },
+              cell: {
+                userEnteredFormat: {
+                  horizontalAlignment: 'CENTER',
+                  verticalAlignment: 'MIDDLE',
+                },
+              },
+              fields:
+                'userEnteredFormat(textFormat,horizontalAlignment,verticalAlignment)',
+            },
+          },
+          {
+            repeatCell: {
+              range: {
+                sheetId,
+                startRowIndex: 3,
+                endRowIndex: 18,
+                startColumnIndex: 0,
+                endColumnIndex: 10,
+              },
+              cell: {
+                userEnteredFormat: {
+                  horizontalAlignment: 'CENTER',
+                  verticalAlignment: 'MIDDLE',
+                },
+              },
+              fields:
+                'userEnteredFormat(textFormat,horizontalAlignment,verticalAlignment)',
+            },
+          },
           {
             repeatCell: {
               range: {
@@ -358,14 +451,13 @@ exports.createGoogleSheetReport = async (req, res) => {
               cell: {
                 userEnteredFormat: {
                   textFormat: { bold: true },
-                  backgroundColor: {
-                    red: 0.9,
-                    green: 0.9,
-                    blue: 0.9,
-                  },
+
+                  horizontalAlignment: 'CENTER',
+                  verticalAlignment: 'MIDDLE',
                 },
               },
-              fields: 'userEnteredFormat.textFormat.bold',
+              fields:
+                'userEnteredFormat(textFormat,horizontalAlignment,verticalAlignment)',
             },
           },
           // 🔹 Bold: Clicks Section
@@ -381,14 +473,13 @@ exports.createGoogleSheetReport = async (req, res) => {
               cell: {
                 userEnteredFormat: {
                   textFormat: { bold: true },
-                  backgroundColor: {
-                    red: 0.9,
-                    green: 0.9,
-                    blue: 0.9,
-                  },
+
+                  horizontalAlignment: 'CENTER',
+                  verticalAlignment: 'MIDDLE',
                 },
               },
-              fields: 'userEnteredFormat.textFormat.bold',
+              fields:
+                'userEnteredFormat(textFormat,horizontalAlignment,verticalAlignment)',
             },
           },
 
@@ -479,14 +570,14 @@ exports.createGoogleSheetReport = async (req, res) => {
     });
 
     const productTypeHeader = [
-      'currentClicks',
-      'previousClicks',
-      'clicksChangePct',
-      'clicksChangeNumber',
-      'currentImpressions',
-      'previousImpressions',
-      'impressionsChangePct',
-      'impressionsChangeNumber',
+      'Current Clicks',
+      'Previous Clicks',
+      'Clicks Change %',
+      'Clicks Change Number',
+      'Current Impressions',
+      'Previous Impressions',
+      'Impressions Change %',
+      'Impressions Change Number',
     ];
 
     productType.forEach(async (type, index) => {
