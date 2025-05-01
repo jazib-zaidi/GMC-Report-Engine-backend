@@ -260,7 +260,7 @@ exports.createGoogleSheetReport = async (req, res) => {
             reportData.allProductDataWithImpressions
               .totalPreviousMetricsWithImpressions.impressions) *
           100
-        )?.toFixed(2) + ' %',
+        )?.toFixed(2) + '%',
       ],
       [],
       ['Actual Clicks'],
@@ -289,7 +289,7 @@ exports.createGoogleSheetReport = async (req, res) => {
             reportData.allProductDataWithImpressions
               .totalPreviousMetricsWithImpressions.clicks) *
           100
-        )?.toFixed(2) + ' %',
+        )?.toFixed(2) + '%',
       ],
     ];
 
