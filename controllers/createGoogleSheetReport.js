@@ -4,25 +4,49 @@ exports.createGoogleSheetReport = async (req, res) => {
   try {
     const { tokens } = req.token;
 
-    const { exportData, reportName, summaryData, selectedDateRange } = req.body;
+    const { previousDateRange, reportName, reportData, selectedDateRange } =
+      req.body;
 
     if (!tokens) {
       return res.status(401).send('No tokens found');
     }
     oauth2Client.setCredentials(tokens);
+    function getTableHeaders(dataArray) {
+      if (!Array.isArray(dataArray)) return [];
 
+      const headers = new Set();
+
+      dataArray.forEach((item) => {
+        if (item && typeof item === 'object') {
+          Object.keys(item).forEach((key) => headers.add(key));
+        }
+      });
+
+      return Array.from(headers);
+    }
     const sheets = google.sheets({ version: 'v4', auth: oauth2Client });
-
-    const product = exportData.product;
-    const { brand } = exportData;
+    console.log(previousDateRange);
+    console.log(selectedDateRange);
+    // const product = exportData.product;
+    // const { brand } = exportData;
     let newsheetDataLength = [{ row: 0, column: 0 }];
-    const sheetDataLength = Object.keys(exportData).map((key) => {
-      return {
-        row: exportData[key].data.length,
-        column: exportData[key].headers.length,
-      };
-    });
+    const sheetDataLength = Object.keys(
+      reportData.allProductDataWithImpressions
+    )
+      .slice(2) // Ignore the first 2 keys
+      .map((key) => {
+        return {
+          row: reportData.allProductDataWithImpressions[key].length,
+          column: getTableHeaders(reportData.allProductDataWithImpressions[key])
+            .length,
+        };
+      });
     newsheetDataLength = [...newsheetDataLength, ...sheetDataLength];
+
+    const allCohortAnalysisDataWithImpressions = getTableHeaders(
+      reportData.allProductDataWithImpressions
+        .allCohortAnalysisDataWithImpressions
+    );
 
     let productType = [];
     let googleProductCategory = [];
@@ -35,6 +59,7 @@ exports.createGoogleSheetReport = async (req, res) => {
     const sheetTitles = [
       'Dashboard',
       'Insights by Product',
+      'All Products',
       'Insights by Brands',
       ...productType,
       ...googleProductCategory,
@@ -58,27 +83,38 @@ exports.createGoogleSheetReport = async (req, res) => {
         item.title,
         item.currentClicks,
         item.previousClicks,
-        item.clickChangePercent.toFixed(2),
-        item.clickChangeNumber,
+        item.clicksChangePct,
+        item.clicksChangeNumber,
         item.currentImpressions,
         item.previousImpressions,
-        item.impressionChangePercent.toFixed(2),
-        item.impressionChangeNumber,
+        item.impressionsChangePct,
+        item.impressionsChangeNumber,
       ]);
       return formattedData;
     }
 
+    const brandHeader = [
+      'brand',
+      'currentClicks',
+      'previousClicks',
+      'clicksChangePct',
+      'clicksChangeNumber',
+      'currentImpressions',
+      'previousImpressions',
+      'impressionsChangePct',
+      'impressionsChangeNumber',
+    ];
     function formatBrandSheetData(data) {
       const formattedData = data.map((item) => [
-        item.brand,
+        item.segment,
         item.currentClicks,
         item.previousClicks,
-        item.clickChangePercent.toFixed(2),
-        item.clickChangeNumber,
+        item.clicksChangePct,
+        item.clicksChangeNumber,
         item.currentImpressions,
         item.previousImpressions,
-        item.impressionChangePercent.toFixed(2),
-        item.impressionChangeNumber,
+        item.impressionsChangePct,
+        item.impressionsChangeNumber,
       ]);
       return formattedData;
     }
@@ -88,15 +124,16 @@ exports.createGoogleSheetReport = async (req, res) => {
         item[type],
         item.currentClicks,
         item.previousClicks,
-        item.clickChangePercent.toFixed(2),
-        item.clickChangeNumber,
+        item.clicksChangePct,
+        item.clicksChangeNumber,
         item.currentImpressions,
         item.previousImpressions,
-        item.impressionChangePercent.toFixed(2),
-        item.impressionChangeNumber,
+        item.impressionsChangePct,
+        item.impressionsChangeNumber,
       ]);
       return formattedData;
     }
+
     function formatDateRange({ startDate, endDate }) {
       const formatDate = (dateStr) => {
         const date = new Date(dateStr);
@@ -109,28 +146,31 @@ exports.createGoogleSheetReport = async (req, res) => {
 
       return `${formatDate(startDate)} – ${formatDate(endDate)}`;
     }
-    function getLastYearDateRange({ startDate, endDate }) {
-      const getLastYearDate = (dateStr) => {
-        const date = new Date(dateStr);
-        date.setFullYear(date.getFullYear() - 1);
-        return date.toISOString().split('T')[0];
-      };
 
-      return {
-        startDate: getLastYearDate(startDate),
-        endDate: getLastYearDate(endDate),
-      };
-    }
-    const allProductData = [product.headers, ...formatSheetData(product.data)];
-    const brandSheetData = [brand.headers, ...formatBrandSheetData(brand.data)];
+    const allProductDataWithImpressions = [
+      allCohortAnalysisDataWithImpressions,
+      ...formatSheetData(
+        reportData.allProductDataWithImpressions
+          .allCohortAnalysisDataWithImpressions
+      ),
+    ];
+
+    const allProductData = [
+      allCohortAnalysisDataWithImpressions,
+      ...formatSheetData(reportData.allProductData.cohortAnalysisData),
+    ];
+
+    const brandSheetData = [
+      brandHeader,
+      ...formatBrandSheetData(
+        reportData.allProductDataWithImpressions.brandCohort
+      ),
+    ];
     const productSheetData = [
       [],
       ['Report timeframe', 'Compared to'],
 
-      [
-        formatDateRange(selectedDateRange),
-        formatDateRange(getLastYearDateRange(selectedDateRange)),
-      ],
+      [formatDateRange(selectedDateRange), formatDateRange(previousDateRange)],
 
       [],
 
@@ -139,36 +179,57 @@ exports.createGoogleSheetReport = async (req, res) => {
       ['Actual Impressions'],
       [
         formatDateRange(selectedDateRange),
-        formatDateRange(getLastYearDateRange(selectedDateRange)),
+        formatDateRange(previousDateRange),
         'Change',
         'Change %',
       ],
       [
-        summaryData.current.impressions,
-        summaryData.previous.impressions,
-        summaryData.changesData.impressions.change,
-        summaryData.changesData.impressions.percent,
+        reportData.allProductDataWithImpressions
+          .totalCurrentMetricsWithImpressions.impressions,
+        reportData.allProductDataWithImpressions
+          .totalPreviousMetricsWithImpressions.impressions,
+        reportData.allProductDataWithImpressions
+          .totalCurrentMetricsWithImpressions.impressions -
+          reportData.allProductDataWithImpressions
+            .totalPreviousMetricsWithImpressions.impressions,
+        ((reportData.allProductDataWithImpressions
+          .totalCurrentMetricsWithImpressions.impressions -
+          reportData.allProductDataWithImpressions
+            .totalPreviousMetricsWithImpressions.impressions) /
+          reportData.allProductDataWithImpressions
+            .totalPreviousMetricsWithImpressions.impressions) *
+          100,
       ],
-
       [],
       ['Actual Clicks'],
       [
         formatDateRange(selectedDateRange),
-        formatDateRange(getLastYearDateRange(selectedDateRange)),
+        formatDateRange(previousDateRange),
         'Change',
         'Change %',
       ],
       [
-        summaryData.current.clicks,
-        summaryData.previous.clicks,
-        summaryData.changesData.clicks.change,
-        summaryData.changesData.clicks.percent,
+        reportData.allProductDataWithImpressions
+          .totalCurrentMetricsWithImpressions.clicks,
+        reportData.allProductDataWithImpressions
+          .totalPreviousMetricsWithImpressions.clicks,
+        reportData.allProductDataWithImpressions
+          .totalCurrentMetricsWithImpressions.clicks -
+          reportData.allProductDataWithImpressions
+            .totalPreviousMetricsWithImpressions.clicks,
+        ((reportData.allProductDataWithImpressions
+          .totalCurrentMetricsWithImpressions.clicks -
+          reportData.allProductDataWithImpressions
+            .totalPreviousMetricsWithImpressions.clicks) /
+          reportData.allProductDataWithImpressions
+            .totalPreviousMetricsWithImpressions.clicks) *
+          100,
       ],
     ];
 
-    // STEP 1: Write data
+    // // STEP 1: Write data
 
-    // STEP 2: Get sheet ID dynamically
+    // // STEP 2: Get sheet ID dynamically
     const sheetMetadat = await sheets.spreadsheets.get({ spreadsheetId });
 
     const newSheet = sheetMetadat.data.sheets.map((sheet) => {
@@ -193,16 +254,16 @@ exports.createGoogleSheetReport = async (req, res) => {
                   userEnteredFormat: {
                     textFormat: {
                       bold: true,
-                      foregroundColor: {
-                        red: 1,
-                        green: 1,
-                        blue: 1,
-                      },
+                      // foregroundColor: {
+                      //   red: 1,
+                      //   green: 1,
+                      //   blue: 1,
+                      // },
                     },
                     backgroundColor: {
-                      red: 37 / 255,
-                      green: 99 / 255,
-                      blue: 235 / 255,
+                      red: 1,
+                      green: 0.898,
+                      blue: 0.6,
                     },
                   },
                 },
@@ -394,11 +455,20 @@ exports.createGoogleSheetReport = async (req, res) => {
       range: 'Insights by Product!A1',
       valueInputOption: 'RAW',
       resource: {
+        values: allProductDataWithImpressions,
+      },
+    });
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: 'All Products!A1',
+      valueInputOption: 'RAW',
+      resource: {
         values: allProductData,
       },
     });
 
-    // 4. Write to Sheet2
+    // // 4. Write to Sheet2
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: 'Insights by Brands!A1',
@@ -408,12 +478,26 @@ exports.createGoogleSheetReport = async (req, res) => {
       },
     });
 
+    const productTypeHeader = [
+      'currentClicks',
+      'previousClicks',
+      'clicksChangePct',
+      'clicksChangeNumber',
+      'currentImpressions',
+      'previousImpressions',
+      'impressionsChangePct',
+      'impressionsChangeNumber',
+    ];
+
     productType.forEach(async (type, index) => {
       const typeSheetData = [
-        exportData[`type${index + 1}`].headers,
+        [`Product Type Level ${index + 1}`, ...productTypeHeader],
+
         ...formatTypeSheetData(
-          exportData[`type${index + 1}`].data,
-          `productTypeL${index + 1}`
+          reportData.allProductDataWithImpressions[
+            `productTypeL${index + 1}Cohort`
+          ],
+          `segment`
         ),
       ];
 
@@ -429,10 +513,12 @@ exports.createGoogleSheetReport = async (req, res) => {
 
     googleProductCategory.forEach(async (type, index) => {
       const typeSheetData = [
-        exportData[`categoryL${index + 1}`].headers,
+        [`Google Product Category Level ${index + 1}`, ...productTypeHeader],
         ...formatTypeSheetData(
-          exportData[`categoryL${index + 1}`].data,
-          `categoryL${index + 1}`
+          reportData.allProductDataWithImpressions[
+            `categoryL${index + 1}Cohort`
+          ],
+          `segment`
         ),
       ];
 

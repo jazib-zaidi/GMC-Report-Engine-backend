@@ -1,9 +1,19 @@
 const { oauth2Client, google } = require('../utils/googleClient');
+const {
+  productType,
+  customLabel,
+  googleProductCategory,
+  getAllCommonProducts,
+  getAllCommonProductsWithImpressions,
+  getTotalMetrics,
+  generateCohortAnalysis,
+  getSegmentedCohortData,
+} = require('../utils/getCategory');
 
 exports.fetchReports = async (req, res) => {
   try {
     const { tokens } = req.token;
-    const { gmcAccountId, date, filter } = req.body;
+    const { gmcAccountId, date, filter, previousDateRange } = req.body;
 
     if (!gmcAccountId) {
       return res
@@ -48,59 +58,37 @@ exports.fetchReports = async (req, res) => {
       return allResults;
     };
 
-    //https://developers.google.com/shopping-content/reference/rest/v2.1/reports/search#Segments
-    //https://developers.google.com/shopping-content/guides/reports/fields?hl=en
-
-    const productType = Array.from({ length: 5 })
-      .map((_, i) => {
-        return `segments.product_type_l${i + 1}`;
-      })
-      .join(',');
-
-    const customLabel = Array.from({ length: 5 })
-      .map((_, i) => {
-        return `segments.custom_label${i}`;
-      })
-      .join(',');
-
     const getAllResults = async (gmcAccountId, startDate, endDate, filter) => {
       let currentQuery = `
-        SELECT segments.offer_id, segments.date, segments.title, segments.brand, ${productType}, ${customLabel},
+        SELECT segments.offer_id,segments.title, segments.brand, ${productType}, ${customLabel},${googleProductCategory},
                metrics.clicks, metrics.impressions, metrics.ctr, metrics.conversions
         FROM MerchantPerformanceView
         WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
-          AND segments.program = 'FREE_PRODUCT_LISTING'
-
+        AND segments.program = 'FREE_PRODUCT_LISTING' 
       `;
 
-      const previousYearStart = new Date(startDate);
-      previousYearStart.setFullYear(previousYearStart.getFullYear() - 1);
+      let previousStart, previousEnd;
 
-      const previousYearEnd = new Date(endDate);
-      previousYearEnd.setFullYear(previousYearEnd.getFullYear() - 1);
+      if (previousDateRange?.startDate && previousDateRange?.endDate) {
+        previousStart = previousDateRange.startDate;
+        previousEnd = previousDateRange.endDate;
+      } else {
+        const prevStart = new Date(startDate);
+        const prevEnd = new Date(endDate);
+        prevStart.setFullYear(prevStart.getFullYear() - 1);
+        prevEnd.setFullYear(prevEnd.getFullYear() - 1);
+
+        previousStart = prevStart.toISOString().split('T')[0];
+        previousEnd = prevEnd.toISOString().split('T')[0];
+      }
 
       let previousQuery = `
-        SELECT segments.offer_id, segments.date, segments.title, segments.brand,segments.custom_label0,
+        SELECT segments.offer_id,  segments.title, segments.brand,${productType}, ${customLabel},${googleProductCategory},
                metrics.clicks, metrics.impressions, metrics.ctr, metrics.conversions
         FROM MerchantPerformanceView
-        WHERE segments.date BETWEEN '${
-          previousYearStart.toISOString().split('T')[0]
-        }' AND '${previousYearEnd.toISOString().split('T')[0]}'
+        WHERE segments.date BETWEEN '${previousStart}' AND '${previousEnd}'
           AND segments.program = 'FREE_PRODUCT_LISTING'
       `;
-      function camelToSnakeCase(str) {
-        return str.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
-      }
-      const combinedFilter = () => {
-        return `segments.${camelToSnakeCase(filter.selectedAttribute)} = "${
-          filter.searchValue
-        }"`;
-      };
-
-      if (filter?.selectedAttribute) {
-        currentQuery += ` AND ${combinedFilter()}`;
-        previousQuery += ` AND ${combinedFilter()}`;
-      }
 
       const [current, previous] = await Promise.all([
         fetchAllDataRecursively(gmcAccountId, currentQuery),
@@ -110,298 +98,163 @@ exports.fetchReports = async (req, res) => {
       return { current, previous };
     };
 
-    const getBrandResults = async (gmcAccountId, startDate, endDate) => {
-      let currentQuery = `
-        SELECT segments.brand,
-               metrics.clicks, metrics.impressions, metrics.ctr, metrics.conversions
-        FROM MerchantPerformanceView
-        WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
-          AND segments.program = 'FREE_PRODUCT_LISTING'
-      `;
-
-      const previousYearStart = new Date(startDate);
-      previousYearStart.setFullYear(previousYearStart.getFullYear() - 1);
-
-      const previousYearEnd = new Date(endDate);
-      previousYearEnd.setFullYear(previousYearEnd.getFullYear() - 1);
-
-      let previousQuery = `
-        SELECT  segments.brand,
-               metrics.clicks, metrics.impressions, metrics.ctr, metrics.conversions
-        FROM MerchantPerformanceView
-        WHERE segments.date BETWEEN '${
-          previousYearStart.toISOString().split('T')[0]
-        }' AND '${previousYearEnd.toISOString().split('T')[0]}'
-          AND segments.program = 'FREE_PRODUCT_LISTING'
-      `;
-      function camelToSnakeCase(str) {
-        return str.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
-      }
-      const combinedFilter = () => {
-        return `segments.${camelToSnakeCase(filter.selectedAttribute)} = "${
-          filter.searchValue
-        }"`;
-      };
-
-      if (filter?.selectedAttribute) {
-        currentQuery += ` AND ${combinedFilter()}`;
-        previousQuery += ` AND ${combinedFilter()}`;
-      }
-
-      const [current, previous] = await Promise.all([
-        fetchAllDataRecursively(gmcAccountId, currentQuery),
-        fetchAllDataRecursively(gmcAccountId, previousQuery),
-      ]);
-
-      return { current, previous };
-    };
-
-    const getSelectedColumnResults = async (
-      gmcAccountId,
-      startDate,
-      endDate,
-      type
-    ) => {
-      let currentQuery = `
-        SELECT segments.${type},
-               metrics.clicks, metrics.impressions, metrics.ctr, metrics.conversions
-        FROM MerchantPerformanceView
-        WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
-          AND segments.program = 'FREE_PRODUCT_LISTING'
-      `;
-
-      const previousYearStart = new Date(startDate);
-      previousYearStart.setFullYear(previousYearStart.getFullYear() - 1);
-
-      const previousYearEnd = new Date(endDate);
-      previousYearEnd.setFullYear(previousYearEnd.getFullYear() - 1);
-
-      let previousQuery = `
-        SELECT  segments.${type},
-               metrics.clicks, metrics.impressions, metrics.ctr, metrics.conversions
-        FROM MerchantPerformanceView
-        WHERE segments.date BETWEEN '${
-          previousYearStart.toISOString().split('T')[0]
-        }' AND '${previousYearEnd.toISOString().split('T')[0]}'
-          AND segments.program = 'FREE_PRODUCT_LISTING'
-      `;
-      function camelToSnakeCase(str) {
-        return str.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
-      }
-      const combinedFilter = () => {
-        return `segments.${camelToSnakeCase(filter.selectedAttribute)} = "${
-          filter.searchValue
-        }"`;
-      };
-
-      if (filter?.selectedAttribute) {
-        currentQuery += ` AND ${combinedFilter()}`;
-        previousQuery += ` AND ${combinedFilter()}`;
-      }
-      const [current, previous] = await Promise.all([
-        fetchAllDataRecursively(gmcAccountId, currentQuery),
-        fetchAllDataRecursively(gmcAccountId, previousQuery),
-      ]);
-
-      return { current, previous };
-    };
-
-    const allBrandResults = await getBrandResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate
-    );
-    const productTypeL1 = await getSelectedColumnResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate,
-      'product_type_l1'
-    );
-    const productTypeL2 = await getSelectedColumnResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate,
-      'product_type_l2'
-    );
-    const productTypeL3 = await getSelectedColumnResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate,
-      'product_type_l3'
-    );
-    const productTypeL4 = await getSelectedColumnResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate,
-      'product_type_l4'
-    );
-    const productTypeL5 = await getSelectedColumnResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate,
-      'product_type_l5'
-    );
-
-    const categoryL1 = await getSelectedColumnResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate,
-      'category_l1'
-    );
-    const categoryL2 = await getSelectedColumnResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate,
-      'category_l2'
-    );
-    const categoryL3 = await getSelectedColumnResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate,
-      'category_l3'
-    );
-    const categoryL4 = await getSelectedColumnResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate,
-      'category_l4'
-    );
-    const categoryL5 = await getSelectedColumnResults(
-      gmcAccountId,
-      date.startDate,
-      date.endDate,
-      'category_l5'
-    );
-
-    const { current, previous } = await getAllResults(
+    let { current, previous } = await getAllResults(
       gmcAccountId,
       date.startDate,
       date.endDate,
       filter
     );
+    function applyFilterToCurrentAndMatchPrevious(data = {}, filter) {
+      if (!filter?.selectedAttribute || !filter?.searchValue) return data;
 
-    const summarize = (data) => {
-      if (!data) return { impressions: 0, clicks: 0 };
-      let impressions = 0,
-        clicks = 0;
-      data.forEach((r) => {
-        impressions += +r.metrics.impressions;
-        clicks += +r.metrics.clicks;
+      const searchVal = filter.searchValue.toLowerCase();
+
+      // Step 1: Identify offerIds where *any* item matches the filter
+      const matchingOfferIds = new Set();
+
+      data.current.forEach((item) => {
+        const attr = item.segments?.[filter.selectedAttribute];
+        const offerId = item.segments?.offerId;
+        if (
+          typeof attr === 'string' &&
+          attr.toLowerCase() === searchVal &&
+          offerId
+        ) {
+          matchingOfferIds.add(offerId);
+        }
       });
-      return { impressions, clicks };
-    };
 
-    const formatNumber = (num) => {
-      return num.toLocaleString('en-US');
-    };
+      // Step 2: Keep all items (current/previous) that have a matching offerId
+      const filteredCurrent = data.current.filter((item) =>
+        matchingOfferIds.has(item.segments?.offerId)
+      );
 
-    const calculateChange = (current, previous) => {
-      const change = current - previous;
-      const percentChange =
-        previous === 0 ? 0 : ((change / previous) * 100).toFixed(2);
+      const filteredPrevious = data.previous.filter((item) =>
+        matchingOfferIds.has(item.segments?.offerId)
+      );
 
       return {
-        change: formatNumber(change),
-        percent: `${percentChange}%`,
+        current: filteredCurrent,
+        previous: filteredPrevious,
       };
-    };
-    const currentSummary = summarize(current);
-    const previousSummary = summarize(previous);
+    }
 
-    const segmentByMonth = (data = []) => {
-      const result = {};
+    let allCommonProducts = getAllCommonProducts(current, previous);
 
-      data.forEach((entry) => {
-        const dateSegment = entry?.segments?.date;
-        const metrics = entry?.metrics;
+    let allProductDataWithImpressions = getAllCommonProductsWithImpressions(
+      allCommonProducts.current,
+      allCommonProducts.previous
+    );
 
-        if (!dateSegment || !metrics) return;
+    allCommonProducts = applyFilterToCurrentAndMatchPrevious(
+      allCommonProducts,
+      filter
+    );
 
-        const monthNum = dateSegment.month;
-        const year = dateSegment.year;
-        const monthKey = `${year}-${String(monthNum).padStart(2, '0')}`;
-        const monthLabel = new Date(year, monthNum - 1).toLocaleString(
-          'default',
-          { month: 'short' }
-        );
+    allProductDataWithImpressions = applyFilterToCurrentAndMatchPrevious(
+      allProductDataWithImpressions,
+      filter
+    );
 
-        if (!result[monthKey]) {
-          result[monthKey] = {
-            name: monthLabel,
-            impressions: 0,
-            clicks: 0,
-            conversions: 0,
-          };
-        }
+    const totalCurrentMetricsWithImpressions = getTotalMetrics(
+      allProductDataWithImpressions.current
+    );
 
-        result[monthKey].impressions += parseInt(metrics.impressions || 0);
-        result[monthKey].clicks += parseInt(metrics.clicks || 0);
-        result[monthKey].conversions += parseInt(metrics.conversions || 0);
-      });
+    const totalCurrentMetrics = getTotalMetrics(allCommonProducts.current);
 
-      return Object.entries(result)
-        .sort(([a], [b]) => new Date(a) - new Date(b))
-        .map(([_, value]) => value);
-    };
+    const totalPreviousMetricsWithImpressions = getTotalMetrics(
+      allProductDataWithImpressions.previous
+    );
+    const totalPreviousMetrics = getTotalMetrics(allCommonProducts.previous);
 
-    // to fetch google product categery for all product
-    // const newData = await content.reports.search({
-    //   merchantId: gmcAccountId,
-    //   requestBody: {
-    //     query: `
-    //     SELECT product_view.id,product_view.category_l1,product_view.category_l2,product_view.category_l3,product_view.category_l4,product_view.category_l5
-    //     FROM ProductView
-    //   `,
-    //     pageSize: 5000,
-    //   },
-    // });
+    const allCohortAnalysisData = generateCohortAnalysis(
+      allCommonProducts.current,
+      allCommonProducts.previous
+    );
+
+    const allCohortAnalysisDataWithImpressions = generateCohortAnalysis(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+
+    const brandCohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'brand'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+    const categoryL1Cohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'categoryL1'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+    const categoryL2Cohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'categoryL2'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+    const categoryL3Cohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'categoryL3'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+    const categoryL4Cohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'categoryL4'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+    const categoryL5Cohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'categoryL5'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+    const productTypeL1Cohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'productTypeL1'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+    const productTypeL2Cohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'productTypeL2'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+    const productTypeL3Cohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'productTypeL3'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+    const productTypeL4Cohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'productTypeL4'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
+    const productTypeL5Cohort = getSegmentedCohortData(
+      allProductDataWithImpressions.current,
+      allProductDataWithImpressions.previous,
+      'productTypeL5'
+    ).sort((a, b) => b.clicksChangeNumber - a.clicksChangeNumber);
 
     res.json({
-      current: {
-        summary: {
-          impressions: formatNumber(currentSummary.impressions),
-          clicks: formatNumber(currentSummary.clicks),
-        },
-        data: current,
-        chartData: segmentByMonth(current),
-        brand: allBrandResults.current,
-        productTypeL1: productTypeL1?.current,
-        productTypeL2: productTypeL2?.current,
-        productTypeL3: productTypeL3?.current,
-        productTypeL4: productTypeL4?.current,
-        productTypeL5: productTypeL5?.current,
-        categoryL1: categoryL1?.current,
-        categoryL2: categoryL2?.current,
-        categoryL3: categoryL3?.current,
-        categoryL4: categoryL4?.current,
-        categoryL5: categoryL5?.current,
+      allProductData: {
+        totalCurrentMetrics,
+        totalPreviousMetrics,
+        cohortAnalysisData: allCohortAnalysisData,
       },
-      previous: {
-        summary: {
-          impressions: formatNumber(previousSummary.impressions),
-          clicks: formatNumber(previousSummary.clicks),
-        },
-        data: previous,
-        chartData: segmentByMonth(previous),
-        brand: allBrandResults.previous,
-        productTypeL1: productTypeL1.previous,
-        productTypeL2: productTypeL2.previous,
-        productTypeL3: productTypeL3.previous,
-        productTypeL4: productTypeL4.previous,
-        productTypeL5: productTypeL5.previous,
-        categoryL1: categoryL1.previous,
-        categoryL2: categoryL2.previous,
-        categoryL3: categoryL3.previous,
-        categoryL4: categoryL4.previous,
-        categoryL5: categoryL5.previous,
-      },
-
-      change: {
-        impressions: calculateChange(
-          currentSummary.impressions,
-          previousSummary.impressions
-        ),
-        clicks: calculateChange(currentSummary.clicks, previousSummary.clicks),
+      allProductDataWithImpressions: {
+        totalCurrentMetricsWithImpressions,
+        totalPreviousMetricsWithImpressions,
+        allCohortAnalysisDataWithImpressions:
+          allCohortAnalysisDataWithImpressions,
+        brandCohort,
+        categoryL1Cohort,
+        categoryL2Cohort,
+        categoryL3Cohort,
+        categoryL4Cohort,
+        categoryL5Cohort,
+        productTypeL1Cohort,
+        productTypeL2Cohort,
+        productTypeL3Cohort,
+        productTypeL4Cohort,
+        productTypeL5Cohort,
       },
     });
   } catch (error) {
