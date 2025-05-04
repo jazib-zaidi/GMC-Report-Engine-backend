@@ -1,18 +1,18 @@
 require('dotenv').config();
 const OpenAI = require('openai');
 
-function buildPrompt(row) {
+function buildPrompt(row, country) {
   return `
-You are Keyword Researcher GPT. Your primary function is to analyze structured product data and generate the most relevant Focus Keyword that aligns with how a typical buyer would search for that product online.
+You are Keyword Researcher GPT. Your primary function is to analyze structured product data and generate the most relevant Focus Keyword that aligns with how a typical buyer in **${country}** would search for that product online.
 
-You analyze the Title, multi-level Product Type hierarchy (up to 5 levels), Google Product Categories (up to 5 levels), and Description to understand the product’s core use and attributes. Based on this, you simulate buyer intent to generate a highly specific, high-relevance Focus Keyword.
+You analyze the Title, multi-level Product Type hierarchy (up to 5 levels), Google Product Categories (up to 5 levels), and Description to understand the product’s core use and attributes. Based on this, you simulate buyer intent in **${country}** to generate a highly specific, high-relevance Focus Keyword.
 
 Important Rules:
-- Do not repeat keywords already in the Title.
-- Do not include the Focus Keyword in the Title.
-- All Focus Keywords must be in Title Case.
-- Keywords must be search-friendly, specific, and reflect actual user search behavior.
-- Avoid generic or overly broad keywords.
+Do not repeat keywords already in the Title.
+Do not include the Focus Keyword in the Title.
+All Focus Keywords must be in Title Case.
+Keywords must be search-friendly, specific, and reflect actual user search behavior in **${country}**.
+Avoid generic or overly broad keywords.
 
 Input:
 Title: ${row['Title']}
@@ -28,14 +28,14 @@ Google Product Category 4: ${row['Google Product Category 4'] || ''}
 Google Product Category 5: ${row['Google Product Category 5'] || ''}
 Description: ${row['Description']}
 
-Return only the most relevant Focus Keyword in Title Case. No explanation.
+Return only the most relevant Focus Keyword in Title Case. No explanation and don't include country in the keywords.
 `;
 }
 const openai = new OpenAI({
   apiKey: process.env.OPEN_AI_KEY,
 });
 
-async function generateKeywords(socket, rows) {
+async function generateKeywords(socket, rows, country) {
   const output = [];
   let i = 0;
   let totalPromptTokens = 0;
@@ -44,7 +44,7 @@ async function generateKeywords(socket, rows) {
   let totalTokens = 0;
 
   for (const row of rows) {
-    const prompt = buildPrompt(row);
+    const prompt = buildPrompt(row, country);
 
     i++;
     try {
@@ -139,8 +139,6 @@ async function writeDataToSheet(
       message: 'Focus keywords sheet created successfully!',
       spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`,
     });
-
-    socket.disconnect();
   } catch (error) {
     console.error('Error writing to sheet:', error);
     socket.emit('googleSheetError', { message: 'Error writing to sheet' });

@@ -14,7 +14,7 @@ const uploadXml = require('./routes/uploadXmlFile');
 const userRoutes = require('./routes/user');
 const googleProductCategory = require('./routes/googleProductCategory');
 const authMiddleware = require('./middlewares/authMiddleware');
-const initSocket = require('./sockets/socketHandler'); // 🔥 NEW — socket logic file
+const { initSocket } = require('./sockets/socketHandler');
 
 const app = express();
 const port = 3000;

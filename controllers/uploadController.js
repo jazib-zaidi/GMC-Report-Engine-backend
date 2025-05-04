@@ -2,6 +2,7 @@ const multer = require('multer');
 const path = require('path');
 const XLSX = require('xlsx'); // Add this line
 const { getProductCategory } = require('../utils/getProductCategory');
+const { connectedSockets } = require('../sockets/socketHandler');
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -32,7 +33,8 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 exports.uploadXlsxFile = async (req, res) => {
   const gmcAccountId = req.query.gmcAccountId;
-
+  const socketId = req.query.socketId;
+  const socket = connectedSockets.get(socketId);
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
@@ -50,6 +52,24 @@ exports.uploadXlsxFile = async (req, res) => {
       try {
         const res = await getProductCategory(gmcAccountId, itemId);
 
+        const categories = [
+          res.categoryL1,
+          res.categoryL2,
+          res.categoryL3,
+          res.categoryL4,
+          res.categoryL5,
+        ];
+
+        const googleCategory = categories
+          .filter((cat) => cat && cat !== 'Empty')
+          .join(' > ');
+
+        if (socket) {
+          socket.emit('mapping', {
+            data: `${product['Item ID']} <--- ${googleCategory}`,
+            totalProduct: data.length,
+          });
+        }
         product['Google Product Category 1'] = res.categoryL1 || 'Empty';
         product['Google Product Category 2'] = res.categoryL2 || 'Empty';
         product['Google Product Category 3'] = res.categoryL3 || 'Empty';

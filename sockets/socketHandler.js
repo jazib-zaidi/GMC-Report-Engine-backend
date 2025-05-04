@@ -4,18 +4,17 @@ const {
 } = require('../utils/generateKeywords');
 const jwt = require('jsonwebtoken');
 const { oauth2Client, google } = require('../utils/googleClient');
-
+const connectedSockets = new Map();
 function initSocket(io) {
   io.on('connection', (socket) => {
     console.log('🔌 A user connected:', socket.id);
-
+    connectedSockets.set(socket.id, socket);
     socket.on('startGeneration', async (data) => {
       try {
-        const { data: inputData, token } = data;
+        const { data: inputData, token, country } = data;
+
         const decoded = jwt.verify(token, process.env.JWT_TOKEN);
 
-        console.log(inputData);
-        console.log(decoded);
         socket.emit('generationComplete', { data: decoded });
         oauth2Client.setCredentials(decoded.tokens);
 
@@ -41,7 +40,7 @@ function initSocket(io) {
         console.log('📄 Spreadsheet created with ID:', spreadsheetId);
 
         // Generate the focus keywords
-        const result = await generateKeywords(socket, inputData);
+        const result = await generateKeywords(socket, inputData, country.label);
         console.log('✅ Keywords generated:', result);
 
         await writeDataToSheet(
@@ -58,10 +57,19 @@ function initSocket(io) {
         });
       }
     });
+
+    socket.on('startMapping', async () => {
+      console.log('first');
+      try {
+        socket.emit('mappingTest', { data: 'Empty >Empty' });
+      } catch (error) {}
+    });
+
     socket.on('disconnect', () => {
+      connectedSockets.delete(socket.id);
       console.log('❌ A user disconnected:', socket.id);
     });
   });
 }
 
-module.exports = initSocket;
+module.exports = { connectedSockets, initSocket };
