@@ -28,7 +28,7 @@ Google Product Category 4: ${row['Google Product Category 4'] || ''}
 Google Product Category 5: ${row['Google Product Category 5'] || ''}
 Description: ${row['Description']}
 
-Return only the most relevant Focus Keyword in Title Case. No explanation and don't include country in the keywords.
+Return only the most relevant Focus Keyword in Title Case. No explanation and make sure no country is included in keyword.
 `;
 }
 const openai = new OpenAI({
