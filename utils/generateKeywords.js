@@ -13,6 +13,7 @@ Do not include the Focus Keyword in the Title.
 All Focus Keywords must be in Title Case.
 Keywords must be search-friendly, specific, and reflect actual user search behavior in **${country}**.
 Avoid generic or overly broad keywords.
+Do not include any country or location terms in the keyword.
 
 Input:
 Title: ${row['Title']}
