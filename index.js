@@ -12,6 +12,7 @@ const reportRoutes = require('./routes/reports');
 const googleSheet = require('./routes/sheet');
 const uploadXml = require('./routes/uploadXmlFile');
 const userRoutes = require('./routes/user');
+const feedXml = require('./routes/feedXml');
 const googleProductCategory = require('./routes/googleProductCategory');
 const authMiddleware = require('./middlewares/authMiddleware');
 const { initSocket } = require('./sockets/socketHandler');
@@ -71,6 +72,7 @@ app.use('/api', userRoutes);
 app.use('/api', googleSheet);
 app.use('/api', uploadXml);
 app.use('/api', googleProductCategory);
+app.use('/api', feedXml);
 
 // Test Route
 app.get('/test', authMiddleware, (req, res) => {
