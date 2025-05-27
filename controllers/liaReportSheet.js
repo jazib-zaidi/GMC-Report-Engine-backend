@@ -15,7 +15,7 @@ exports.liaReportSheet = async (req, res) => {
       );
       return filteredProductData;
     };
-    console.log(exportData.AiInsigth[0].answer);
+
     const getProductByStore = (storeId) => {
       const filteredProductData = exportData?.liaReportData?.results.filter(
         (item) => item?.product_store_id == storeId
@@ -51,7 +51,7 @@ exports.liaReportSheet = async (req, res) => {
       return num.toLocaleString();
     }
     // Create spreadsheet with 3 sheets
-    console.log(storeId());
+
     const sheetTitles = [
       'Dashboard',
       'Channel - Online',
@@ -428,7 +428,6 @@ exports.liaReportSheet = async (req, res) => {
       },
     });
 
-    console.log(`https://docs.google.com/spreadsheets/d/${spreadsheetId}`);
     res.send({
       message: 'Spreadsheet with multiple sheets created and data added!',
 
