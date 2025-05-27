@@ -15,6 +15,11 @@ const googleProductCategory = Array.from({ length: 5 })
     return `segments.category_l${i + 1}`;
   })
   .join(',');
+const liaGoogleProductCategory = Array.from({ length: 5 })
+  .map((_, i) => {
+    return `segments.product_category_level${i + 1}`;
+  })
+  .join(',');
 
 function getTotalMetrics(products) {
   let totalImpressions = 0;
@@ -259,4 +264,5 @@ module.exports = {
   groupAndSumByOfferId,
   generateCohortAnalysis,
   getSegmentedCohortData,
+  liaGoogleProductCategory,
 };

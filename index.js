@@ -13,6 +13,7 @@ const googleSheet = require('./routes/sheet');
 const uploadXml = require('./routes/uploadXmlFile');
 const userRoutes = require('./routes/user');
 const feedXml = require('./routes/feedXml');
+const lia = require('./routes/lia');
 const googleProductCategory = require('./routes/googleProductCategory');
 const authMiddleware = require('./middlewares/authMiddleware');
 const { initSocket } = require('./sockets/socketHandler');
@@ -56,8 +57,8 @@ app.use(
     },
   })
 );
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 const corsOptions = {
   origin: process.env.FRONTEND_URL,
@@ -73,6 +74,7 @@ app.use('/api', googleSheet);
 app.use('/api', uploadXml);
 app.use('/api', googleProductCategory);
 app.use('/api', feedXml);
+app.use('/api', lia);
 
 // Test Route
 app.get('/test', authMiddleware, (req, res) => {

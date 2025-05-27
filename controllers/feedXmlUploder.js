@@ -34,7 +34,7 @@ exports.createGoogleSheetFromXmlUrl = async (req, res) => {
     if (!items) {
       return res.status(400).send('❌ No <item> entries found in the XML.');
     }
-    console.log(parsed);
+
     const entries = Array.isArray(items) ? items : [items];
 
     // Flatten top-level item fields only
