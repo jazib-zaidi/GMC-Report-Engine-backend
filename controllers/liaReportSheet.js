@@ -274,31 +274,46 @@ exports.liaReportSheet = async (req, res) => {
       ...StoreRows,
     ];
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: 'Dashboard!A1',
-      valueInputOption: 'USER_ENTERED',
-      resource: {
-        values: DashboardHeaders,
+    await sheets.spreadsheets.values.update(
+      {
+        spreadsheetId,
+        range: 'Dashboard!A1',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: DashboardHeaders,
+        },
       },
-    });
+      {
+        timeout: 60000, // <-- 60 seconds
+      }
+    );
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: 'Channel - Online!A1',
-      valueInputOption: 'USER_ENTERED',
-      resource: {
-        values: onlineHeader,
+    await sheets.spreadsheets.values.update(
+      {
+        spreadsheetId,
+        range: 'Channel - Online!A1',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: onlineHeader,
+        },
       },
-    });
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: 'Channel - Local!A1',
-      valueInputOption: 'USER_ENTERED',
-      resource: {
-        values: localHeader,
+      {
+        timeout: 60000, // <-- 60 seconds
+      }
+    );
+    await sheets.spreadsheets.values.update(
+      {
+        spreadsheetId,
+        range: 'Channel - Local!A1',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: localHeader,
+        },
       },
-    });
+      {
+        timeout: 60000, // <-- 60 seconds
+      }
+    );
 
     const storeData = exportData.liaReportData.formattedStoreQueryData;
 
@@ -367,14 +382,19 @@ exports.liaReportSheet = async (req, res) => {
         ...PerStoreProductRows,
       ];
 
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: `'${sheetTitle}'!A1`,
-        valueInputOption: 'USER_ENTERED',
-        resource: {
-          values,
+      await sheets.spreadsheets.values.update(
+        {
+          spreadsheetId,
+          range: `'${sheetTitle}'!A1`,
+          valueInputOption: 'USER_ENTERED',
+          resource: {
+            values,
+          },
         },
-      });
+        {
+          timeout: 60000, // <-- 60 seconds
+        }
+      );
     }
     const formatted = exportData.AiInsigth.map(({ question, answer }) => {
       const shortDescription = answer.response?.[0]?.shortDescription || '';
@@ -408,25 +428,30 @@ exports.liaReportSheet = async (req, res) => {
       });
     });
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: 'AI Insight!A1',
-      valueInputOption: 'USER_ENTERED',
-      resource: {
-        values: [
-          [
-            'Question',
-            'Short Description',
-            'Product Title',
-            'Cost',
-            'Conversions',
-            'Clicks',
-            'Impressions',
+    await sheets.spreadsheets.values.update(
+      {
+        spreadsheetId,
+        range: 'AI Insight!A1',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: [
+            [
+              'Question',
+              'Short Description',
+              'Product Title',
+              'Cost',
+              'Conversions',
+              'Clicks',
+              'Impressions',
+            ],
+            ...flattenedData,
           ],
-          ...flattenedData,
-        ],
+        },
       },
-    });
+      {
+        timeout: 60000, // <-- 60 seconds
+      }
+    );
 
     res.send({
       message: 'Spreadsheet with multiple sheets created and data added!',

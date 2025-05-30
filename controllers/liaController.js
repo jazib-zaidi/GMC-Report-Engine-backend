@@ -132,7 +132,7 @@ exports.lia = async (req, res) => {
           item['Item ID']?.toLowerCase() ===
           row.segments?.product_item_id?.toLowerCase()
       );
-
+      console.log(metaData);
       return {
         product_title: row.segments?.product_title,
         product_store_id: row.segments?.product_store_id,
@@ -158,7 +158,7 @@ exports.lia = async (req, res) => {
         product_category_level2: taxonomyMap[level2Id] || '',
         product_category_level3: taxonomyMap[level3Id] || '',
         product_category_level4: taxonomyMap[level4Id] || '',
-        metaData,
+        metaData: metaData || [],
       };
     });
 
@@ -279,7 +279,7 @@ exports.liaStoreData = async (req, res) => {
         product_category_level2: taxonomyMap[level2Id] || '',
         product_category_level3: taxonomyMap[level3Id] || '',
         product_category_level4: taxonomyMap[level4Id] || '',
-        metaData,
+        metaData: metaData || [],
       };
     });
 
@@ -406,7 +406,7 @@ exports.AiInsigth = async (req, res) => {
           product_category_level2: taxonomyMap[level2Id] || '',
           product_category_level3: taxonomyMap[level3Id] || '',
           product_category_level4: taxonomyMap[level4Id] || '',
-          metaData,
+          metaData: metaData || [],
           shortDescription,
         };
       });
