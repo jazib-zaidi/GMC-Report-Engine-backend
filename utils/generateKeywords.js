@@ -11,6 +11,7 @@ Important Rules:
 Do not create a focused keyword phrase that already appears in the current title as an exact match.
 Do not add descriptive words or phrases to the focused keyword that are not already in the input data.
 All Focus Keywords must be in Title Case.
+Make sure Keywords remail short,
 Keywords must be search-friendly, specific, and reflect actual user search behavior in **${country}**.
 Avoid generic or overly broad keywords.
 Do not include any country or location terms in the keyword.
