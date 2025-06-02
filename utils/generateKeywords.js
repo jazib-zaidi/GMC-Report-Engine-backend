@@ -122,10 +122,20 @@ async function writeDataToSheet(
       throw new Error('No data to write');
     }
 
-    const headers = ['Item ID', 'Focus Keyword'];
+    const headers = [
+      'Item ID',
+      'Title',
+      'Description',
+      'Product Type (1st Level)',
+      'Product Type (2nd Level)',
+      'Product Type (3rd Level)',
+      'Product Type (4th Level)',
+      'Product Type (5th Level)',
+      'Focus Keyword',
+    ];
 
     const rows = data.map((row) => headers.map((header) => row[header]));
-
+    // console.log('from sheet', headers);
     const sheetData = [headers, ...rows];
 
     await sheets.spreadsheets.values.update({

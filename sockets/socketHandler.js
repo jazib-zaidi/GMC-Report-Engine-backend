@@ -41,7 +41,7 @@ function initSocket(io) {
 
         // Generate the focus keywords
         const result = await generateKeywords(socket, inputData, country.label);
-        console.log('✅ Keywords generated:', result);
+        // console.log('✅ Keywords generated:', result);
 
         await writeDataToSheet(
           sheets,

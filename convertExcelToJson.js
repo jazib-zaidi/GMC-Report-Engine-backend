@@ -28,7 +28,7 @@ try {
 
   // Write JSON to file
   fs.writeFileSync(outputFileName, JSON.stringify(result, null, 2));
-  console.log(`✅ Converted and saved to ${outputFileName}`);
+  // console.log(`✅ Converted and saved to ${outputFileName}`);
 } catch (err) {
   console.error('❌ Error reading or converting the Excel file:', err.message);
 }

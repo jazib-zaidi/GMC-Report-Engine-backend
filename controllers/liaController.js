@@ -132,7 +132,7 @@ exports.lia = async (req, res) => {
           item['Item ID']?.toLowerCase() ===
           row.segments?.product_item_id?.toLowerCase()
       );
-      console.log(metaData);
+      // console.log(metaData);
       return {
         product_title: row.segments?.product_title,
         product_store_id: row.segments?.product_store_id,
