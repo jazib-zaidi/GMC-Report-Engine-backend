@@ -32,3 +32,5 @@ try {
 } catch (err) {
   console.error('❌ Error reading or converting the Excel file:', err.message);
 }
+
+// node convertExcelToJson.js data.xlsx

@@ -8,7 +8,19 @@ const { GoogleAdsApi } = require('google-ads-api');
 const { loadTaxonomyMap } = require('../utils/loadTaxonomyMap');
 const { generateQuery, aiDescription } = require('../utils/AiQueryGeneration');
 const productData = require('../rundna.json');
+const { getGAQLForQuestion } = require('../utles/utls');
+function formatNumber(num) {
+  return num?.toLocaleString();
+}
 
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value || 0);
+};
 exports.lia = async (req, res) => {
   try {
     const { tokens } = req.token;
@@ -94,8 +106,16 @@ exports.lia = async (req, res) => {
       FROM shopping_performance_view
         WHERE ${filters.join(' AND ')}
     `;
+    const unitsSold = `
+      SELECT
+        segments.product_channel,
+         metrics.units_sold
+         FROM shopping_performance_view
+        WHERE ${filters.join(' AND ')}
+    `;
 
     const storequeryData = await customer.query(storeQueryFeild);
+    const units_sold = await customer.query(unitsSold);
 
     const formattedStoreData = storeData.map((row) => ({
       product_channel:
@@ -104,7 +124,7 @@ exports.lia = async (req, res) => {
       clicks: row.metrics?.clicks || 0,
       impressions: row.metrics?.impressions || 0,
       conversions: row.metrics?.conversions || 0,
-      cost: (row.metrics?.cost_micros || 0) / 1_000_000, // converting micros to regular currency
+      cost: (row.metrics?.cost_micros || 0) / 1_000_000,
       conversions_value: row.metrics?.conversions_value || 0,
     }));
     const formattedStoreQueryData = storequeryData.map((row) => ({
@@ -112,7 +132,7 @@ exports.lia = async (req, res) => {
       clicks: row.metrics?.clicks || 0,
       impressions: row.metrics?.impressions || 0,
       conversions: row.metrics?.conversions || 0,
-      cost: (row.metrics?.cost_micros || 0) / 1_000_000, // converting micros to regular currency
+      cost: (row.metrics?.cost_micros || 0) / 1_000_000,
       conversions_value: row.metrics?.conversions_value || 0,
     }));
     const response = await customer.query(query);
@@ -127,12 +147,13 @@ exports.lia = async (req, res) => {
       const level2Id = extractCategoryId(row.segments?.product_category_level2);
       const level3Id = extractCategoryId(row.segments?.product_category_level3);
       const level4Id = extractCategoryId(row.segments?.product_category_level4);
+
       const metaData = productData[row.segments?.product_merchant_id]?.filter(
         (item) =>
           item['Item ID']?.toLowerCase() ===
           row.segments?.product_item_id?.toLowerCase()
       );
-      // console.log(metaData);
+
       return {
         product_title: row.segments?.product_title,
         product_store_id: row.segments?.product_store_id,
@@ -186,6 +207,7 @@ exports.lia = async (req, res) => {
       topProductsPerStore,
       results,
       formattedStoreQueryData,
+      units_sold,
     });
   } catch (error) {
     console.error('Google Ads API error:', error);
@@ -312,8 +334,7 @@ exports.AiInsigth = async (req, res) => {
       const match = resourceName.match(/~(\d+)$/);
       return match ? match[1] : null;
     };
-    const queryDataRaw = await generateQuery(question);
-    const queryData = queryDataRaw.replace(/\n/g, ' ').trim();
+    // const queryDataRaw = await generateQuery(question);
 
     // ✅ Basic validation: GAQL must start with WHERE or ORDER
     if (!queryData.startsWith('WHERE') && !queryData.startsWith('ORDER')) {
@@ -324,13 +345,13 @@ exports.AiInsigth = async (req, res) => {
         queryData: queryData,
       });
     } else {
-      let startDate = '2025-04-23';
-      let endDate = '2025-05-22';
+      let startDate = '2025-05-05';
+      let endDate = '2025-06-04';
       const dateQuery = `segments.date BETWEEN '${startDate}' AND '${endDate}'`;
-
+      const query = getGAQLForQuestion(question, startDate, endDate);
       const newQuery = `WHERE ${dateQuery} AND ${queryData.split('WHERE')[1]}`;
 
-      const query = `
+      const queryr = `
       SELECT
         segments.product_title,
         segments.product_store_id,
@@ -358,23 +379,14 @@ exports.AiInsigth = async (req, res) => {
       };
 
       const response = await customer.query(query);
-      const shortDescription = await aiDescription(question, response);
 
-      const taxonomyMap = loadTaxonomyMap();
-      const results = response.map((row) => {
-        const level1Id = extractCategoryId(
-          row.segments?.product_category_level1
-        );
-        const level2Id = extractCategoryId(
-          row.segments?.product_category_level2
-        );
-        const level3Id = extractCategoryId(
-          row.segments?.product_category_level3
-        );
-        const level4Id = extractCategoryId(
-          row.segments?.product_category_level4
-        );
+      const shortDescription = await aiDescription(
+        question,
+        response.slice(0, 1),
+        (totalproduct = response.length)
+      );
 
+      const results = response.slice(0, 10).map((row) => {
         const metaData = productData[row.segments?.product_merchant_id]?.filter(
           (item) =>
             item['Item ID']?.toLowerCase() ===
@@ -387,25 +399,15 @@ exports.AiInsigth = async (req, res) => {
           product_merchant_id: row.segments?.product_merchant_id,
           product_item_id: row.segments?.product_item_id,
           clicks: row.metrics?.clicks || 0,
-          conversions: row.metrics?.conversions || 0,
-          impressions: row.metrics?.impressions || 0,
-          cost: (row.metrics?.cost_micros || 0) / 1_000_000,
-          conversions_value: row.metrics?.conversions_value || 0,
-          channel: row.segments?.product_channel,
-          product_channel:
-            ProductChannelEnum[row.segments?.product_channel] || 'UNKNOWN',
-
-          product_brand: row.segments?.product_brand,
-          product_country: row.segments?.product_country,
-          product_type_l1: row.segments?.product_type_l1 || '',
-          product_type_l2: row.segments?.product_type_l2 || '',
-          product_type_l3: row.segments?.product_type_l3 || '',
-          product_type_l4: row.segments?.product_type_l4 || '',
-          product_type_l5: row.segments?.product_type_l5 || '',
-          product_category_level1: taxonomyMap[level1Id] || '',
-          product_category_level2: taxonomyMap[level2Id] || '',
-          product_category_level3: taxonomyMap[level3Id] || '',
-          product_category_level4: taxonomyMap[level4Id] || '',
+          ctr: formatNumber(row?.metrics?.ctr) || 0,
+          roas: formatNumber(
+            row?.metrics?.conversions_value /
+              (row.metrics.cost_micros / 1_000_000)
+          ),
+          conversions: formatNumber(row.metrics?.conversions) || 0,
+          impressions: formatNumber(row.metrics?.impressions) || 0,
+          cost: formatNumber(row.metrics?.cost_micros / 1_000_000) || 0,
+          conversions_value: formatNumber(row.metrics?.conversions_value) || 0,
           metaData: metaData || [],
           shortDescription,
         };
@@ -414,7 +416,8 @@ exports.AiInsigth = async (req, res) => {
       res.json({
         question: question,
         response: results,
-        queryData: queryData,
+        queryData: query,
+        data: response,
       });
     }
   } catch (error) {

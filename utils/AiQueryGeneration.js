@@ -131,19 +131,39 @@ Note: Don't include question in the output, just the GAQL query. No explanation 
   return res.choices[0].message.content;
 };
 // AI optimization batch -> record
-const aiDescription = async (question, data) => {
+const aiDescription = async (question, data, totalproduct) => {
   const prompt = `
-You are a product analyst. Based on the question and data provided below, write a **very short summary** that will be displayed **above a table** in an HTML document.
+You are a product analyst. Based on the question and data provided below, write a very short summary to be displayed above a table in an HTML document.
 
-✅ Format the response using proper HTML tags where appropriate:
-- Use <p> for paragraphs
-- Use <strong> or <b> to highlight key insights
-- Use <ul> and <li> for bullet points if listing multiple findings
+✅ Instructions:
+Use proper HTML formatting:
 
-Keep the summary concise, insightful, and suitable for business users.
+Wrap all text in a <p> tag unless listing items.
 
-Question: ${question}
-Data: ${JSON.stringify(data)}
+Use <strong> or <b> to highlight key insights.
+
+Use <ul> and <li> if presenting multiple bullet points.
+
+Be concise and factual.
+
+Formate all the number to be fixed .00 Only
+
+For cost calculate is like - row.metrics?.cost_micros / 1_000_000)
+
+Do not add extra context, assumptions, or embellishments.
+
+Focus only on answering the specific question
+
+Question: ${question}  
+Data: ${JSON.stringify(data)}  
+Total Product Count: ${totalproduct}
+
+At the end of your response, include Please note that this is only one of the "formate this number"${totalproduct} total products. The full report, once exported, will include all products. following are the sample of 10 product please click Yes if you Want to save this in the report?
+
+
+
+.
+
 `;
 
   const res = await openai.chat.completions.create({
