@@ -338,7 +338,7 @@ exports.AiInsigth = async (req, res) => {
 
     let startDate = '2025-05-05';
     let endDate = '2025-06-04';
-    const dateQuery = `segments.date BETWEEN '${startDate}' AND '${endDate}'`;
+
     const query = getGAQLForQuestion(question, startDate, endDate);
 
     const ProductChannelEnum = {
