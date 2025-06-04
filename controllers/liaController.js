@@ -336,22 +336,13 @@ exports.AiInsigth = async (req, res) => {
     };
     // const queryDataRaw = await generateQuery(question);
 
-    // ✅ Basic validation: GAQL must start with WHERE or ORDER
-    if (!queryData.startsWith('WHERE') && !queryData.startsWith('ORDER')) {
-      return res.json({
-        errorMessage: queryData,
-        question: question,
-        response: [],
-        queryData: queryData,
-      });
-    } else {
-      let startDate = '2025-05-05';
-      let endDate = '2025-06-04';
-      const dateQuery = `segments.date BETWEEN '${startDate}' AND '${endDate}'`;
-      const query = getGAQLForQuestion(question, startDate, endDate);
-      const newQuery = `WHERE ${dateQuery} AND ${queryData.split('WHERE')[1]}`;
+    let startDate = '2025-05-05';
+    let endDate = '2025-06-04';
+    const dateQuery = `segments.date BETWEEN '${startDate}' AND '${endDate}'`;
+    const query = getGAQLForQuestion(question, startDate, endDate);
+    const newQuery = `WHERE ${dateQuery} AND ${queryData.split('WHERE')[1]}`;
 
-      const queryr = `
+    const queryr = `
       SELECT
         segments.product_title,
         segments.product_store_id,
@@ -371,55 +362,54 @@ exports.AiInsigth = async (req, res) => {
       ${newQuery}
       
     `;
-      const ProductChannelEnum = {
-        0: 'UNSPECIFIED',
-        1: 'UNKNOWN',
-        2: 'ONLINE',
-        3: 'LOCAL',
-      };
+    const ProductChannelEnum = {
+      0: 'UNSPECIFIED',
+      1: 'UNKNOWN',
+      2: 'ONLINE',
+      3: 'LOCAL',
+    };
 
-      const response = await customer.query(query);
+    const response = await customer.query(query);
 
-      const shortDescription = await aiDescription(
-        question,
-        response.slice(0, 1),
-        (totalproduct = response.length)
+    const shortDescription = await aiDescription(
+      question,
+      response.slice(0, 1),
+      (totalproduct = response.length)
+    );
+
+    const results = response.slice(0, 10).map((row) => {
+      const metaData = productData[row.segments?.product_merchant_id]?.filter(
+        (item) =>
+          item['Item ID']?.toLowerCase() ===
+          row.segments?.product_item_id?.toLowerCase()
       );
 
-      const results = response.slice(0, 10).map((row) => {
-        const metaData = productData[row.segments?.product_merchant_id]?.filter(
-          (item) =>
-            item['Item ID']?.toLowerCase() ===
-            row.segments?.product_item_id?.toLowerCase()
-        );
+      return {
+        product_title: row.segments?.product_title,
+        product_store_id: row.segments?.product_store_id,
+        product_merchant_id: row.segments?.product_merchant_id,
+        product_item_id: row.segments?.product_item_id,
+        clicks: row.metrics?.clicks || 0,
+        ctr: formatNumber(row?.metrics?.ctr) || 0,
+        roas: formatNumber(
+          row?.metrics?.conversions_value /
+            (row.metrics.cost_micros / 1_000_000)
+        ),
+        conversions: formatNumber(row.metrics?.conversions) || 0,
+        impressions: formatNumber(row.metrics?.impressions) || 0,
+        cost: formatNumber(row.metrics?.cost_micros / 1_000_000) || 0,
+        conversions_value: formatNumber(row.metrics?.conversions_value) || 0,
+        metaData: metaData || [],
+        shortDescription,
+      };
+    });
 
-        return {
-          product_title: row.segments?.product_title,
-          product_store_id: row.segments?.product_store_id,
-          product_merchant_id: row.segments?.product_merchant_id,
-          product_item_id: row.segments?.product_item_id,
-          clicks: row.metrics?.clicks || 0,
-          ctr: formatNumber(row?.metrics?.ctr) || 0,
-          roas: formatNumber(
-            row?.metrics?.conversions_value /
-              (row.metrics.cost_micros / 1_000_000)
-          ),
-          conversions: formatNumber(row.metrics?.conversions) || 0,
-          impressions: formatNumber(row.metrics?.impressions) || 0,
-          cost: formatNumber(row.metrics?.cost_micros / 1_000_000) || 0,
-          conversions_value: formatNumber(row.metrics?.conversions_value) || 0,
-          metaData: metaData || [],
-          shortDescription,
-        };
-      });
-
-      res.json({
-        question: question,
-        response: results,
-        queryData: query,
-        data: response,
-      });
-    }
+    res.json({
+      question: question,
+      response: results,
+      queryData: query,
+      data: response,
+    });
   } catch (error) {
     console.error('Google Ads API error:', error);
     res.status(500).json({ error: error.message });
