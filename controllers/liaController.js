@@ -340,28 +340,7 @@ exports.AiInsigth = async (req, res) => {
     let endDate = '2025-06-04';
     const dateQuery = `segments.date BETWEEN '${startDate}' AND '${endDate}'`;
     const query = getGAQLForQuestion(question, startDate, endDate);
-    const newQuery = `WHERE ${dateQuery} AND ${queryData.split('WHERE')[1]}`;
 
-    const queryr = `
-      SELECT
-        segments.product_title,
-        segments.product_store_id,
-        segments.product_merchant_id,
-        segments.product_item_id,
-        metrics.clicks,
-       ${productType},
-        ${liaGoogleProductCategory},
-        metrics.conversions,
-        metrics.cost_micros,
-        metrics.conversions_value,
-        metrics.impressions,
-        segments.product_channel,
-        segments.product_brand,
-        segments.product_country
-      FROM shopping_performance_view
-      ${newQuery}
-      
-    `;
     const ProductChannelEnum = {
       0: 'UNSPECIFIED',
       1: 'UNKNOWN',
@@ -373,7 +352,7 @@ exports.AiInsigth = async (req, res) => {
 
     const shortDescription = await aiDescription(
       question,
-      response.slice(0, 1),
+      response.slice(0, 10),
       (totalproduct = response.length)
     );
 
