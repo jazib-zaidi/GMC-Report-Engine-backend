@@ -147,7 +147,7 @@ Use <ul> and <li> if presenting multiple bullet points.
 Be concise and factual.
 
 Formate all the number to be fixed .00 Only
-
+And include metrics in the summary
 For cost calculate is like - row.metrics?.cost_micros / 1_000_000)
 
 Do not add extra context, assumptions, or embellishments.
