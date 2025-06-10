@@ -4,11 +4,39 @@ exports.liaReportSheet = async (req, res) => {
   try {
     const { tokens } = req.token;
     const { exportData } = req.body;
-
+    console.log(exportData);
     if (!tokens) {
       return res.status(401).send('No tokens found');
     }
+    const ProductChannelEnum = {
+      0: 'UNSPECIFIED',
+      1: 'UNKNOWN',
+      2: 'ONLINE',
+      3: 'LOCAL',
+    };
 
+    const getUnitSold = (sold, channel = null) => {
+      let sum = 0;
+
+      const data = sold.map((i) => {
+        sum += i.metrics.units_sold;
+        return {
+          product_channel: ProductChannelEnum[i.segments.product_channel],
+          units_sold: i.metrics.units_sold,
+        };
+      });
+
+      if (channel) {
+        const h = data.filter((item) => {
+          if (item.product_channel == channel) {
+            return item;
+          }
+        });
+        sum = h[0]?.units_sold;
+      }
+
+      return Math.ceil(sum);
+    };
     const getProductByChannel = (channel) => {
       const filteredProductData = exportData?.liaReportData?.results.filter(
         (item) => item.product_channel == channel
@@ -24,10 +52,19 @@ exports.liaReportSheet = async (req, res) => {
       return filteredProductData;
     };
 
+    const mapabl = (id) => {
+      const filterData = exportData?.mapableStore.filter((i) => {
+        if (i.id == id.split('/')[1]) {
+          return i;
+        }
+      });
+
+      return filterData[0]?.name || id;
+    };
     const storeId = () => {
       return exportData.liaReportData.formattedStoreQueryData
         .filter((item) => item.store_id)
-        .map((data) => `Store - ${data.store_id}`);
+        .map((data) => `Store - ${mapabl(data.store_id)}`);
     };
 
     const getCTR = (clicks, impressions) => {
@@ -37,7 +74,7 @@ exports.liaReportSheet = async (req, res) => {
     };
 
     const getROAS = (revenue, cost) => {
-      return cost > 0 ? (revenue / cost).toFixed(2) : '0';
+      return cost > 0 ? Number((revenue / cost).toFixed(2)) : '0';
     };
 
     oauth2Client.setCredentials(tokens);
@@ -71,6 +108,11 @@ exports.liaReportSheet = async (req, res) => {
       },
     });
 
+    const sheetIdMap = {};
+    createResponse.data.sheets.forEach((sheet) => {
+      sheetIdMap[sheet.properties.title] = sheet.properties.sheetId;
+    });
+
     const spreadsheetId = createResponse.data.spreadsheetId;
     const channel = exportData.liaReportData.data.map((item) => {
       return item;
@@ -83,21 +125,26 @@ exports.liaReportSheet = async (req, res) => {
         data.impressions === 0
           ? 0
           : ((data.clicks / data.impressions) * 100).toFixed(2) + '%';
-      const roas =
-        data.cost === 0
-          ? data.conversions_value > 0
-            ? '∞'
-            : 0
-          : ((data.conversions_value / data.cost) * 100).toFixed(2);
-
+      const roas = getROAS(data.conversions_value, data.cost);
+      const sheetMap = {
+        ONLINE: 'Channel - Online',
+        LOCAL: 'Channel - Local',
+      };
+      const sheetTitle =
+        sheetMap[data.product_channel.toUpperCase()] || 'Unknown';
+      const gid = sheetIdMap[sheetTitle] || 0;
+      const link = `=HYPERLINK("#gid=${gid}", "${data.product_channel}")`;
       return [
-        data.product_channel,
+        link,
         formatNumber(data.impressions),
         formatNumber(data.clicks),
         formatNumber(ctr),
         formatNumber(data.conversions.toFixed(2)),
-        data.cost.toFixed(2),
+        '$' + data.cost.toFixed(2),
         formatNumber(roas),
+        formatNumber(
+          getUnitSold(exportData.liaReportData.units_sold, data.product_channel)
+        ),
       ];
     });
     const StoreRows = exportData.liaReportData.formattedStoreQueryData
@@ -107,30 +154,43 @@ exports.liaReportSheet = async (req, res) => {
           data.impressions === 0
             ? 0
             : ((data.clicks / data.impressions) * 100).toFixed(2) + '%';
-        const roas =
-          data.cost === 0
-            ? data.conversions_value > 0
-              ? '∞'
-              : 0
-            : ((data.conversions_value / data.cost) * 100).toFixed(2);
+        const roas = getROAS(data.conversions_value, data.cost);
 
+        const storeId = 'Store - ' + mapabl(data.store_id);
+
+        const gid = sheetIdMap[storeId] || 0;
+        const link = `=HYPERLINK("#gid=${gid}", "${mapabl(data.store_id)}")`;
         return [
-          data.store_id,
+          link,
           formatNumber(data.impressions),
           formatNumber(data.clicks),
           formatNumber(ctr),
           formatNumber(data.conversions.toFixed(2)),
-          data.cost.toFixed(2),
+          '$' + data.cost.toFixed(2),
           formatNumber(roas),
         ];
       });
 
     const DashboardHeaders = [
-      ['Report timeframe', ''],
-      ['Total Clicks', exportData?.dashboardProf?.Total_Clicks], // Row 1
-      ['ROAS', exportData?.dashboardProf?.ROAS], // Row 3
+      ['Report timeframe', '07 May 2025 – 06 Jun 2025'],
+      [
+        'Total Clicks',
+        exportData?.dashboardProf?.Total_Clicks,
+        '',
+        "Units sold data isn't available at the store level",
+      ], // Row 1
+      [
+        'Conv. value / cost',
+        exportData?.dashboardProf?.ROAS,
+        '',
+        "Store visits aren't available from Google's API – please log in to Google Ads.",
+      ], // Row 3
       ['Ad Spend', exportData?.dashboardProf?.Ad_Spend], // Row 4
       ['Revenue', exportData?.dashboardProf?.Revenue], // Row 5
+      [
+        'Unit Sold',
+        formatNumber(getUnitSold(exportData.liaReportData?.units_sold)),
+      ], // Row 5
       [''],
       ['Channel Performance', ''],
       [
@@ -140,7 +200,8 @@ exports.liaReportSheet = async (req, res) => {
         'CTR',
         'Conversions',
         'Cost',
-        'ROAS',
+        'Conv. value / cost',
+        'Unit Sold',
       ],
       ...channelRows,
     ];
@@ -179,25 +240,37 @@ exports.liaReportSheet = async (req, res) => {
       };
     }
 
+    const gid = sheetIdMap['Dashboard'] || 0;
+    const link = `=HYPERLINK("#gid=${gid}", "<- Go Back To Dashboard")`;
     const onlineHeader = [
+      [link, ''],
+      [''],
       [
         'Total Clicks',
         getChannelSummary(exportData?.liaReportData?.results, 'ONLINE')
           .totalClicks,
       ], // Row 1
       [
-        'ROAS',
+        'Conv. value / cost',
         getChannelSummary(exportData?.liaReportData?.results, 'ONLINE').roas,
       ], // Row 3
       [
         'Ad Spend',
-        getChannelSummary(exportData?.liaReportData?.results, 'ONLINE')
-          .totalCost,
+        '$' +
+          getChannelSummary(exportData?.liaReportData?.results, 'ONLINE')
+            .totalCost,
       ], // Row 4
       [
         'Revenue',
-        getChannelSummary(exportData?.liaReportData?.results, 'ONLINE')
-          .totalRevenue,
+        '$' +
+          getChannelSummary(exportData?.liaReportData?.results, 'ONLINE')
+            .totalRevenue,
+      ], // Row 5
+      [
+        'Unit Sold',
+        formatNumber(
+          getUnitSold(exportData.liaReportData.units_sold, 'ONLINE')
+        ),
       ], // Row 5
       [''],
       ['Online Product Performance', ''],
@@ -212,7 +285,7 @@ exports.liaReportSheet = async (req, res) => {
         'CTR',
         'Conversions',
         'Cost',
-        'ROAS',
+        'Conv. value / cost',
       ],
     ];
 
@@ -234,31 +307,40 @@ exports.liaReportSheet = async (req, res) => {
       item.clicks,
       getCTR(item.clicks, item.impressions),
       item.conversions,
-      item.cost.toFixed(2),
+      '$' + item.cost.toFixed(2),
       getROAS(item.conversions_value, item.cost),
     ]);
 
     onlineHeader.push(...onlineProductRows);
-
+    const gidd = sheetIdMap['Dashboard'] || 0;
+    const linkk = `=HYPERLINK("#gid=${gidd}", "<- Go Back To Dashboard")`;
     const localHeader = [
+      [linkk, ''],
+      [''],
       [
         'Total Clicks',
         getChannelSummary(exportData?.liaReportData?.results, 'LOCAL')
           .totalClicks,
       ], // Row 1
       [
-        'ROAS',
+        'Conv. value / cost',
         getChannelSummary(exportData?.liaReportData?.results, 'LOCAL').roas,
       ], // Row 3
       [
         'Ad Spend',
-        getChannelSummary(exportData?.liaReportData?.results, 'LOCAL')
-          .totalCost,
+        '$' +
+          getChannelSummary(exportData?.liaReportData?.results, 'LOCAL')
+            .totalCost,
       ], // Row 4
       [
         'Revenue',
-        getChannelSummary(exportData?.liaReportData?.results, 'LOCAL')
-          .totalRevenue,
+        '$' +
+          getChannelSummary(exportData?.liaReportData?.results, 'LOCAL')
+            .totalRevenue,
+      ], // Row 5
+      [
+        'Unit Sold',
+        formatNumber(getUnitSold(exportData.liaReportData.units_sold, 'LOCAL')),
       ], // Row 5
       [''],
       ['All Store', ''],
@@ -269,7 +351,7 @@ exports.liaReportSheet = async (req, res) => {
         'CTR',
         'Conversions',
         'Cost',
-        'ROAS',
+        'Conv. value / cost',
       ],
       ...StoreRows,
     ];
@@ -287,7 +369,67 @@ exports.liaReportSheet = async (req, res) => {
         timeout: 60000, // <-- 60 seconds
       }
     );
+    const metadata = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheet = metadata.data.sheets.find(
+      (s) => s.properties.title === 'Dashboard'
+    );
+    const sheetId = sheet.properties.sheetId;
 
+    // formate
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: {
+        requests: [
+          // Bold headers and background color
+          {
+            repeatCell: {
+              range: {
+                sheetId: sheetId, // Replace this with your actual sheet ID
+                startRowIndex: 0,
+                endRowIndex: 1,
+                startColumnIndex: 0,
+                endColumnIndex: 2,
+              },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: {
+                    red: 1,
+                    green: 0.898,
+                    blue: 0.6,
+                  },
+                  textFormat: {
+                    bold: true,
+                    fontSize: 10,
+                  },
+                  horizontalAlignment: 'CENTER',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+
+          // Resize first 10 columns
+          {
+            updateDimensionProperties: {
+              range: {
+                sheetId: sheetId,
+                dimension: 'COLUMNS',
+                startIndex: 0,
+                endIndex: 10,
+              },
+              properties: {
+                pixelSize: 180,
+              },
+              fields: 'pixelSize',
+            },
+          },
+        ],
+      },
+    });
+
+    //
     await sheets.spreadsheets.values.update(
       {
         spreadsheetId,
@@ -320,7 +462,7 @@ exports.liaReportSheet = async (req, res) => {
     for (const item of storeData) {
       if (!item.store_id) continue;
 
-      const sheetTitle = `Store - ${item.store_id}`;
+      const sheetTitle = `Store - ${mapabl(item.store_id)}`;
       const ctr =
         item.impressions === 0
           ? '0%'
@@ -331,7 +473,7 @@ exports.liaReportSheet = async (req, res) => {
           ? item.conversions_value > 0
             ? '∞'
             : '0'
-          : ((item.conversions_value / item.cost) * 100).toFixed(2);
+          : (item.conversions_value / item.cost).toFixed(2);
       const PerStoreProductRows = getProductByStore(item.store_id)?.map(
         (item) => [
           item.product_item_id,
@@ -351,19 +493,35 @@ exports.liaReportSheet = async (req, res) => {
           item.clicks,
           getCTR(item.clicks, item.impressions),
           item.conversions,
-          item.cost.toFixed(2),
+          '$' + item.cost.toFixed(2),
           getROAS(item.conversions_value, item.cost),
         ]
       );
+      const sheetMap = {
+        ONLINE: 'Channel - Online',
+        LOCAL: 'Channel - Local',
+      };
 
+      const gid = sheetIdMap['Channel - Local'] || 0;
+      const link = `=HYPERLINK("#gid=${gid}", "< Go Back to Local")`;
       const values = [
-        ['Store ID', item.store_id],
+        [link, ''],
+        [''],
+        [
+          'Store Name',
+          `=HYPERLINK("https://www.google.com/search?q=${mapabl(
+            item.store_id
+          )}", "${mapabl(item.store_id)}")`,
+        ],
         ['Impressions', formatNumber(item.impressions)],
         ['Clicks', formatNumber(item.clicks)],
         ['CTR', ctr],
         ['Conversions', formatNumber(item.conversions)],
-        ['Cost', item.cost.toFixed(2)],
-        ['ROAS', typeof roas === 'string' ? roas : formatNumber(roas)],
+        ['Cost', '$' + item.cost.toFixed(2)],
+        [
+          'Conv. value / cost',
+          typeof roas === 'string' ? roas : formatNumber(roas),
+        ],
         [''],
         ['Product Performance', ''],
         [
@@ -377,7 +535,7 @@ exports.liaReportSheet = async (req, res) => {
           'CTR',
           'Conversions',
           'Cost',
-          'ROAS',
+          'Conv. value / cost',
         ],
         ...PerStoreProductRows,
       ];
@@ -420,7 +578,7 @@ exports.liaReportSheet = async (req, res) => {
           question,
           shortDescription,
           product.title,
-          product.cost,
+          '$' + product.cost,
           product.conversions,
           product.clicks,
           product.impressions,
