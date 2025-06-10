@@ -4,7 +4,7 @@ exports.liaReportSheet = async (req, res) => {
   try {
     const { tokens } = req.token;
     const { exportData } = req.body;
-    console.log(exportData);
+
     if (!tokens) {
       return res.status(401).send('No tokens found');
     }
@@ -94,7 +94,7 @@ exports.liaReportSheet = async (req, res) => {
       'Channel - Online',
       'Channel - Local',
       ...storeId(),
-      'AI Insight',
+      // 'AI Insight',
     ];
 
     const createResponse = await sheets.spreadsheets.create({
@@ -373,19 +373,29 @@ exports.liaReportSheet = async (req, res) => {
     const sheet = metadata.data.sheets.find(
       (s) => s.properties.title === 'Dashboard'
     );
+    const Channel_Online = metadata.data.sheets.find(
+      (s) => s.properties.title === 'Channel - Online'
+    );
+    const Channel_Local = metadata.data.sheets.find(
+      (s) => s.properties.title === 'Channel - Local'
+    );
     const sheetId = sheet.properties.sheetId;
+    const Channel_Online_id = Channel_Online.properties.sheetId;
+    const Channel_Local_id = Channel_Local.properties.sheetId;
 
-    // formate
+    // Define the data range (adjust row/column count as needed)
+    const totalRows = 20; // e.g., 20 rows including header
+    const totalColumns = 5; // e.g., 5 columns
 
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       resource: {
         requests: [
-          // Bold headers and background color
+          // 1. Bold header styling
           {
             repeatCell: {
               range: {
-                sheetId: sheetId, // Replace this with your actual sheet ID
+                sheetId: sheetId,
                 startRowIndex: 0,
                 endRowIndex: 1,
                 startColumnIndex: 0,
@@ -409,20 +419,629 @@ exports.liaReportSheet = async (req, res) => {
                 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
             },
           },
+          {
+            repeatCell: {
+              range: {
+                sheetId: sheetId,
+                startRowIndex: 1,
+                endRowIndex: 6,
+                startColumnIndex: 1,
+                endColumnIndex: 2,
+              },
+              cell: {
+                userEnteredFormat: {
+                  horizontalAlignment: 'RIGHT',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+          {
+            repeatCell: {
+              range: {
+                sheetId: sheetId,
+                startRowIndex: 1,
+                endRowIndex: 8,
+                startColumnIndex: 0,
+                endColumnIndex: 1,
+              },
+              cell: {
+                userEnteredFormat: {
+                  textFormat: {
+                    bold: true,
+                    fontSize: 10,
+                  },
+                  horizontalAlignment: 'LEFT',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
 
-          // Resize first 10 columns
+          // 2. Resize columns
           {
             updateDimensionProperties: {
               range: {
                 sheetId: sheetId,
                 dimension: 'COLUMNS',
                 startIndex: 0,
-                endIndex: 10,
+                endIndex: 7,
+              },
+              properties: {
+                pixelSize: 150,
+              },
+              fields: 'pixelSize',
+            },
+          },
+
+          // // 3. Freeze the header row
+          // {
+          //   updateSheetProperties: {
+          //     properties: {
+          //       sheetId: sheetId,
+          //       gridProperties: {
+          //         frozenRowCount: 1,
+          //       },
+          //     },
+          //     fields: 'gridProperties.frozenRowCount',
+          //   },
+          // },
+
+          // adding background
+          {
+            repeatCell: {
+              range: {
+                sheetId: sheetId,
+                startRowIndex: 8,
+                endRowIndex: 9,
+                startColumnIndex: 0,
+                endColumnIndex: 8,
+              },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: {
+                    red: 1,
+                    green: 0.898,
+                    blue: 0.6,
+                  },
+                  textFormat: {
+                    bold: true,
+                    fontSize: 10,
+                  },
+                  horizontalAlignment: 'CENTER',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+
+          // 4. Add borders around each cell in the range
+          {
+            updateBorders: {
+              range: {
+                sheetId: sheetId,
+                startRowIndex: 0,
+                endRowIndex: 6,
+                startColumnIndex: 0,
+                endColumnIndex: 2,
+              },
+
+              top: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              bottom: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              left: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              right: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerHorizontal: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerVertical: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+            },
+          },
+          {
+            updateBorders: {
+              range: {
+                sheetId: sheetId,
+                startRowIndex: 8,
+                endRowIndex: 11,
+                startColumnIndex: 0,
+                endColumnIndex: 8,
+              },
+
+              top: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              bottom: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              left: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              right: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerHorizontal: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerVertical: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+            },
+          },
+        ],
+      },
+    });
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: {
+        requests: [
+          // 1. Bold header styling
+
+          {
+            repeatCell: {
+              range: {
+                sheetId: Channel_Online_id,
+                startRowIndex: 2,
+                endRowIndex: 7,
+                startColumnIndex: 1,
+                endColumnIndex: 2,
+              },
+              cell: {
+                userEnteredFormat: {
+                  horizontalAlignment: 'RIGHT',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+          {
+            repeatCell: {
+              range: {
+                sheetId: Channel_Online_id,
+                startRowIndex: 1,
+                endRowIndex: 9,
+                startColumnIndex: 0,
+                endColumnIndex: 1,
+              },
+              cell: {
+                userEnteredFormat: {
+                  textFormat: {
+                    bold: true,
+                    fontSize: 10,
+                  },
+                  horizontalAlignment: 'LEFT',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+          {
+            repeatCell: {
+              range: {
+                sheetId: Channel_Online_id,
+                startRowIndex: 2,
+                endRowIndex: 7,
+                startColumnIndex: 0,
+                endColumnIndex: 1,
+              },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: {
+                    red: 1,
+                    green: 0.898,
+                    blue: 0.6,
+                  },
+                  textFormat: {
+                    bold: true,
+                    fontSize: 10,
+                  },
+                  horizontalAlignment: 'LEFT',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+
+          // 2. Resize columns
+          {
+            updateDimensionProperties: {
+              range: {
+                sheetId: Channel_Online_id,
+                dimension: 'COLUMNS',
+                startIndex: 0,
+                endIndex: totalColumns,
               },
               properties: {
                 pixelSize: 180,
               },
               fields: 'pixelSize',
+            },
+          },
+
+          // // 3. Freeze the header row
+          // {
+          //   updateSheetProperties: {
+          //     properties: {
+          //       sheetId: sheetId,
+          //       gridProperties: {
+          //         frozenRowCount: 1,
+          //       },
+          //     },
+          //     fields: 'gridProperties.frozenRowCount',
+          //   },
+          // },
+
+          // adding background
+          {
+            repeatCell: {
+              range: {
+                sheetId: Channel_Online_id,
+                startRowIndex: 9,
+                endRowIndex: 10,
+                startColumnIndex: 0,
+                endColumnIndex: 19,
+              },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: {
+                    red: 1,
+                    green: 0.898,
+                    blue: 0.6,
+                  },
+                  textFormat: {
+                    bold: true,
+                    fontSize: 10,
+                  },
+                  horizontalAlignment: 'CENTER',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+
+          // 4. Add borders around each cell in the range
+          {
+            updateBorders: {
+              range: {
+                sheetId: Channel_Online_id,
+                startRowIndex: 2,
+                endRowIndex: 7,
+                startColumnIndex: 0,
+                endColumnIndex: 2,
+              },
+
+              top: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              bottom: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              left: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              right: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerHorizontal: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerVertical: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+            },
+          },
+          {
+            updateBorders: {
+              range: {
+                sheetId: Channel_Online_id,
+                startRowIndex: 9,
+                endRowIndex: onlineProductRows.length,
+                startColumnIndex: 0,
+                endColumnIndex: 19,
+              },
+
+              top: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              bottom: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              left: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              right: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerHorizontal: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerVertical: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: {
+        requests: [
+          // 1. Bold header styling
+
+          {
+            repeatCell: {
+              range: {
+                sheetId: Channel_Local_id,
+                startRowIndex: 2,
+                endRowIndex: 7,
+                startColumnIndex: 1,
+                endColumnIndex: 2,
+              },
+              cell: {
+                userEnteredFormat: {
+                  horizontalAlignment: 'RIGHT',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+          {
+            repeatCell: {
+              range: {
+                sheetId: Channel_Local_id,
+                startRowIndex: 1,
+                endRowIndex: 9,
+                startColumnIndex: 0,
+                endColumnIndex: 1,
+              },
+              cell: {
+                userEnteredFormat: {
+                  textFormat: {
+                    bold: true,
+                    fontSize: 10,
+                  },
+                  horizontalAlignment: 'LEFT',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+          {
+            repeatCell: {
+              range: {
+                sheetId: Channel_Local_id,
+                startRowIndex: 2,
+                endRowIndex: 7,
+                startColumnIndex: 0,
+                endColumnIndex: 1,
+              },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: {
+                    red: 1,
+                    green: 0.898,
+                    blue: 0.6,
+                  },
+                  textFormat: {
+                    bold: true,
+                    fontSize: 10,
+                  },
+                  horizontalAlignment: 'LEFT',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+
+          // 2. Resize columns
+          {
+            updateDimensionProperties: {
+              range: {
+                sheetId: Channel_Local_id,
+                dimension: 'COLUMNS',
+                startIndex: 0,
+                endIndex: totalColumns,
+              },
+              properties: {
+                pixelSize: 180,
+              },
+              fields: 'pixelSize',
+            },
+          },
+
+          // // 3. Freeze the header row
+          // {
+          //   updateSheetProperties: {
+          //     properties: {
+          //       sheetId: sheetId,
+          //       gridProperties: {
+          //         frozenRowCount: 1,
+          //       },
+          //     },
+          //     fields: 'gridProperties.frozenRowCount',
+          //   },
+          // },
+
+          // adding background
+          {
+            repeatCell: {
+              range: {
+                sheetId: Channel_Local_id,
+                startRowIndex: 9,
+                endRowIndex: 10,
+                startColumnIndex: 0,
+                endColumnIndex: 7,
+              },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: {
+                    red: 1,
+                    green: 0.898,
+                    blue: 0.6,
+                  },
+                  textFormat: {
+                    bold: true,
+                    fontSize: 10,
+                  },
+                  horizontalAlignment: 'CENTER',
+                },
+              },
+              fields:
+                'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+            },
+          },
+
+          // 4. Add borders around each cell in the range
+          {
+            updateBorders: {
+              range: {
+                sheetId: Channel_Local_id,
+                startRowIndex: 2,
+                endRowIndex: 7,
+                startColumnIndex: 0,
+                endColumnIndex: 2,
+              },
+
+              top: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              bottom: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              left: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              right: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerHorizontal: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerVertical: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+            },
+          },
+          {
+            updateBorders: {
+              range: {
+                sheetId: Channel_Local_id,
+                startRowIndex: 9,
+                endRowIndex: 9 + StoreRows.length + 1,
+                startColumnIndex: 0,
+                endColumnIndex: 7,
+              },
+
+              top: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              bottom: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              left: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              right: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerHorizontal: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
+              innerVertical: {
+                style: 'SOLID',
+                width: 1,
+                color: { red: 0, green: 0, blue: 0 },
+              },
             },
           },
         ],
@@ -443,6 +1062,7 @@ exports.liaReportSheet = async (req, res) => {
         timeout: 60000, // <-- 60 seconds
       }
     );
+
     await sheets.spreadsheets.values.update(
       {
         spreadsheetId,
@@ -540,6 +1160,232 @@ exports.liaReportSheet = async (req, res) => {
         ...PerStoreProductRows,
       ];
 
+      let Store_Local = metadata.data.sheets.find(
+        (s) => s.properties.title === sheetTitle
+      );
+      const Store_Local_Id = Store_Local.properties.sheetId;
+
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        resource: {
+          requests: [
+            // 1. Bold header styling
+
+            {
+              repeatCell: {
+                range: {
+                  sheetId: Store_Local_Id,
+                  startRowIndex: 2,
+                  endRowIndex: 9,
+                  startColumnIndex: 1,
+                  endColumnIndex: 2,
+                },
+                cell: {
+                  userEnteredFormat: {
+                    horizontalAlignment: 'RIGHT',
+                  },
+                },
+                fields:
+                  'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+              },
+            },
+            {
+              repeatCell: {
+                range: {
+                  sheetId: Store_Local_Id,
+                  startRowIndex: 1,
+                  endRowIndex: 11,
+                  startColumnIndex: 0,
+                  endColumnIndex: 1,
+                },
+                cell: {
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: true,
+                      fontSize: 10,
+                    },
+                    horizontalAlignment: 'LEFT',
+                  },
+                },
+                fields:
+                  'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+              },
+            },
+            {
+              repeatCell: {
+                range: {
+                  sheetId: Store_Local_Id,
+                  startRowIndex: 2,
+                  endRowIndex: 9,
+                  startColumnIndex: 0,
+                  endColumnIndex: 1,
+                },
+                cell: {
+                  userEnteredFormat: {
+                    backgroundColor: {
+                      red: 1,
+                      green: 0.898,
+                      blue: 0.6,
+                    },
+                    textFormat: {
+                      bold: true,
+                      fontSize: 10,
+                    },
+                    horizontalAlignment: 'LEFT',
+                  },
+                },
+                fields:
+                  'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+              },
+            },
+
+            // 2. Resize columns
+            {
+              updateDimensionProperties: {
+                range: {
+                  sheetId: Store_Local_Id,
+                  dimension: 'COLUMNS',
+                  startIndex: 0,
+                  endIndex: 19,
+                },
+                properties: {
+                  pixelSize: 150,
+                },
+                fields: 'pixelSize',
+              },
+            },
+
+            // // 3. Freeze the header row
+            // {
+            //   updateSheetProperties: {
+            //     properties: {
+            //       sheetId: sheetId,
+            //       gridProperties: {
+            //         frozenRowCount: 1,
+            //       },
+            //     },
+            //     fields: 'gridProperties.frozenRowCount',
+            //   },
+            // },
+
+            // adding background
+            {
+              repeatCell: {
+                range: {
+                  sheetId: Store_Local_Id,
+                  startRowIndex: 11,
+                  endRowIndex: 12,
+                  startColumnIndex: 0,
+                  endColumnIndex: 19,
+                },
+                cell: {
+                  userEnteredFormat: {
+                    backgroundColor: {
+                      red: 1,
+                      green: 0.898,
+                      blue: 0.6,
+                    },
+                    textFormat: {
+                      bold: true,
+                      fontSize: 10,
+                    },
+                    horizontalAlignment: 'CENTER',
+                  },
+                },
+                fields:
+                  'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+              },
+            },
+
+            // 4. Add borders around each cell in the range
+            {
+              updateBorders: {
+                range: {
+                  sheetId: Store_Local_Id,
+                  startRowIndex: 2,
+                  endRowIndex: 9,
+                  startColumnIndex: 0,
+                  endColumnIndex: 2,
+                },
+
+                top: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+                bottom: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+                left: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+                right: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+                innerHorizontal: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+                innerVertical: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+              },
+            },
+            {
+              updateBorders: {
+                range: {
+                  sheetId: Store_Local_Id,
+                  startRowIndex: 11,
+                  endRowIndex: 11 + PerStoreProductRows.length + 1,
+                  startColumnIndex: 0,
+                  endColumnIndex: 19,
+                },
+
+                top: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+                bottom: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+                left: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+                right: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+                innerHorizontal: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+                innerVertical: {
+                  style: 'SOLID',
+                  width: 1,
+                  color: { red: 0, green: 0, blue: 0 },
+                },
+              },
+            },
+          ],
+        },
+      });
+
       await sheets.spreadsheets.values.update(
         {
           spreadsheetId,
@@ -586,30 +1432,30 @@ exports.liaReportSheet = async (req, res) => {
       });
     });
 
-    await sheets.spreadsheets.values.update(
-      {
-        spreadsheetId,
-        range: 'AI Insight!A1',
-        valueInputOption: 'USER_ENTERED',
-        resource: {
-          values: [
-            [
-              'Question',
-              'Short Description',
-              'Product Title',
-              'Cost',
-              'Conversions',
-              'Clicks',
-              'Impressions',
-            ],
-            ...flattenedData,
-          ],
-        },
-      },
-      {
-        timeout: 60000, // <-- 60 seconds
-      }
-    );
+    // await sheets.spreadsheets.values.update(
+    //   {
+    //     spreadsheetId,
+    //     range: 'AI Insight!A1',
+    //     valueInputOption: 'USER_ENTERED',
+    //     resource: {
+    //       values: [
+    //         [
+    //           'Question',
+    //           'Short Description',
+    //           'Product Title',
+    //           'Cost',
+    //           'Conversions',
+    //           'Clicks',
+    //           'Impressions',
+    //         ],
+    //         ...flattenedData,
+    //       ],
+    //     },
+    //   },
+    //   {
+    //     timeout: 60000, // <-- 60 seconds
+    //   }
+    // );
 
     res.send({
       message: 'Spreadsheet with multiple sheets created and data added!',
