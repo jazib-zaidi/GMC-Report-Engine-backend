@@ -1,5 +1,9 @@
 const { oauth2Client, google } = require('../utils/googleClient');
 
+function formatNumber(num) {
+  return num.toLocaleString();
+}
+
 exports.createGoogleSheetReport = async (req, res) => {
   try {
     const { tokens } = req.token;
@@ -97,14 +101,14 @@ exports.createGoogleSheetReport = async (req, res) => {
       const formattedData = data.map((item) => [
         item.offerId,
         item.title,
-        item.currentClicks,
-        item.previousClicks,
+        formatNumber(item.currentClicks),
+        formatNumber(item.previousClicks),
         formatPercent(item.clicksChangePct),
-        item.clicksChangeNumber,
-        item.currentImpressions,
-        item.previousImpressions,
+        formatNumber(item.clicksChangeNumber),
+        formatNumber(item.currentImpressions),
+        formatNumber(item.previousImpressions),
         formatPercent(item.impressionsChangePct),
-        item.impressionsChangeNumber,
+        formatNumber(item.impressionsChangeNumber),
       ]);
       return formattedData;
     }
@@ -123,14 +127,14 @@ exports.createGoogleSheetReport = async (req, res) => {
     function formatBrandSheetData(data) {
       const formattedData = data.map((item) => [
         item.segment,
-        item.currentClicks,
-        item.previousClicks,
+        formatNumber(item.currentClicks),
+        formatNumber(item.previousClicks),
         formatPercent(item.clicksChangePct),
-        item.clicksChangeNumber,
-        item.currentImpressions,
-        item.previousImpressions,
+        formatNumber(item.clicksChangeNumber),
+        formatNumber(item.currentImpressions),
+        formatNumber(item.previousImpressions),
         formatPercent(item.impressionsChangePct),
-        item.impressionsChangeNumber,
+        formatNumber(item.impressionsChangeNumber),
       ]);
       return formattedData;
     }
@@ -138,14 +142,14 @@ exports.createGoogleSheetReport = async (req, res) => {
     function formatTypeSheetData(data, type) {
       const formattedData = data.map((item) => [
         item[type],
-        item.currentClicks,
-        item.previousClicks,
+        formatNumber(item.currentClicks),
+        formatNumber(item.previousClicks),
         formatPercent(item.clicksChangePct),
-        item.clicksChangeNumber,
-        item.currentImpressions,
-        item.previousImpressions,
+        formatNumber(item.clicksChangeNumber),
+        formatNumber(item.currentImpressions),
+        formatNumber(item.previousImpressions),
         formatPercent(item.impressionsChangePct),
-        item.impressionsChangeNumber,
+        formatNumber(item.impressionsChangeNumber),
       ]);
       return formattedData;
     }
@@ -213,7 +217,7 @@ exports.createGoogleSheetReport = async (req, res) => {
 
       ...formatSheetData(reportData.allProductData.cohortAnalysisData),
     ];
-
+    const totalColumns = 5;
     const brandSheetData = [
       brandHeader,
       ...formatBrandSheetData(
@@ -244,14 +248,20 @@ exports.createGoogleSheetReport = async (req, res) => {
         'Change %',
       ],
       [
-        reportData.allProductDataWithImpressions
-          .totalCurrentMetricsWithImpressions.impressions,
-        reportData.allProductDataWithImpressions
-          .totalPreviousMetricsWithImpressions.impressions,
-        reportData.allProductDataWithImpressions
-          .totalCurrentMetricsWithImpressions.impressions -
+        formatNumber(
           reportData.allProductDataWithImpressions
-            .totalPreviousMetricsWithImpressions.impressions,
+            .totalCurrentMetricsWithImpressions.impressions
+        ),
+        formatNumber(
+          reportData.allProductDataWithImpressions
+            .totalPreviousMetricsWithImpressions.impressions
+        ),
+        formatNumber(
+          reportData.allProductDataWithImpressions
+            .totalCurrentMetricsWithImpressions.impressions -
+            reportData.allProductDataWithImpressions
+              .totalPreviousMetricsWithImpressions.impressions
+        ),
         (
           ((reportData.allProductDataWithImpressions
             .totalCurrentMetricsWithImpressions.impressions -
@@ -273,14 +283,20 @@ exports.createGoogleSheetReport = async (req, res) => {
         'Change %',
       ],
       [
-        reportData.allProductDataWithImpressions
-          .totalCurrentMetricsWithImpressions.clicks,
-        reportData.allProductDataWithImpressions
-          .totalPreviousMetricsWithImpressions.clicks,
-        reportData.allProductDataWithImpressions
-          .totalCurrentMetricsWithImpressions.clicks -
+        formatNumber(
           reportData.allProductDataWithImpressions
-            .totalPreviousMetricsWithImpressions.clicks,
+            .totalCurrentMetricsWithImpressions.clicks
+        ),
+        formatNumber(
+          reportData.allProductDataWithImpressions
+            .totalPreviousMetricsWithImpressions.clicks
+        ),
+        formatNumber(
+          reportData.allProductDataWithImpressions
+            .totalCurrentMetricsWithImpressions.clicks -
+            reportData.allProductDataWithImpressions
+              .totalPreviousMetricsWithImpressions.clicks
+        ),
         (
           ((reportData.allProductDataWithImpressions
             .totalCurrentMetricsWithImpressions.clicks -
@@ -316,6 +332,17 @@ exports.createGoogleSheetReport = async (req, res) => {
                   startColumnIndex: 0,
                   endColumnIndex: i == 0 ? 0 : 10,
                 },
+                // {
+                //   updateSheetProperties: {
+                //     properties: {
+                //       sheetId: sheetId,
+                //       gridProperties: {
+                //         frozenRowCount: 1,
+                //       },
+                //     },
+                //     fields: 'gridProperties.frozenRowCount',
+                //   },
+                // },
                 cell: {
                   userEnteredFormat: {
                     textFormat: {
@@ -334,6 +361,31 @@ exports.createGoogleSheetReport = async (req, res) => {
                   },
                 },
                 fields: 'userEnteredFormat(backgroundColor,textFormat)',
+              },
+            },
+            {
+              updateDimensionProperties: {
+                range: {
+                  sheetId: sheetId,
+                  dimension: 'COLUMNS',
+                  startIndex: 0,
+                  endIndex: totalColumns,
+                },
+                properties: {
+                  pixelSize: 180,
+                },
+                fields: 'pixelSize',
+              },
+            },
+            {
+              updateSheetProperties: {
+                properties: {
+                  sheetId: sheetId,
+                  gridProperties: {
+                    frozenRowCount: 1,
+                  },
+                },
+                fields: 'gridProperties.frozenRowCount',
               },
             },
             {

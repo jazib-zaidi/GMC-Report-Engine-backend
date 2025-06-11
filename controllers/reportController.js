@@ -107,17 +107,24 @@ exports.fetchReports = async (req, res) => {
     function applyFilterToCurrentAndMatchPrevious(data = {}, filter) {
       if (!filter?.selectedAttribute || !filter?.searchValue) return data;
 
-      const searchVal = filter.searchValue.toLowerCase();
+      // Split multiline input into a Set of lowercase trimmed values
+      const searchValues = new Set(
+        filter.searchValue
+          .split('\n')
+          .map((val) => val.trim().toLowerCase())
+          .filter(Boolean)
+      );
 
-      // Step 1: Identify offerIds where *any* item matches the filter
+      // Step 1: Identify offerIds where any item matches one of the values
       const matchingOfferIds = new Set();
 
       data.current.forEach((item) => {
         const attr = item.segments?.[filter.selectedAttribute];
         const offerId = item.segments?.offerId;
+
         if (
           typeof attr === 'string' &&
-          attr.toLowerCase() === searchVal &&
+          searchValues.has(attr.toLowerCase()) &&
           offerId
         ) {
           matchingOfferIds.add(offerId);
