@@ -109,7 +109,7 @@ exports.fetchReports = async (req, res) => {
       if (!filter?.selectedAttribute || !filter?.searchValue) return data;
 
       const mode = filter?.mode.toLowerCase() || 'include'; // default to include if not specified
-      console.log(mode);
+
       // Prepare search values (lowercased and trimmed)
       const searchValues = new Set(
         filter.searchValue
