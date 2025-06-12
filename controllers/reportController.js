@@ -104,10 +104,13 @@ exports.fetchReports = async (req, res) => {
       date.endDate,
       filter
     );
+
     function applyFilterToCurrentAndMatchPrevious(data = {}, filter) {
       if (!filter?.selectedAttribute || !filter?.searchValue) return data;
 
-      // Split multiline input into a Set of lowercase trimmed values
+      const mode = filter?.mode.toLowerCase() || 'include'; // default to include if not specified
+      console.log(mode);
+      // Prepare search values (lowercased and trimmed)
       const searchValues = new Set(
         filter.searchValue
           .split('\n')
@@ -115,23 +118,25 @@ exports.fetchReports = async (req, res) => {
           .filter(Boolean)
       );
 
-      // Step 1: Identify offerIds where any item matches one of the values
+      // Identify offerIds that match the condition
       const matchingOfferIds = new Set();
 
       data.current.forEach((item) => {
         const attr = item.segments?.[filter.selectedAttribute];
         const offerId = item.segments?.offerId;
 
+        const isMatch =
+          typeof attr === 'string' && searchValues.has(attr.toLowerCase());
+
         if (
-          typeof attr === 'string' &&
-          searchValues.has(attr.toLowerCase()) &&
-          offerId
+          offerId &&
+          ((mode === 'include' && isMatch) || (mode === 'exclude' && !isMatch))
         ) {
           matchingOfferIds.add(offerId);
         }
       });
 
-      // Step 2: Keep all items (current/previous) that have a matching offerId
+      // Filter both periods using the matching offerIds
       const filteredCurrent = data.current.filter((item) =>
         matchingOfferIds.has(item.segments?.offerId)
       );

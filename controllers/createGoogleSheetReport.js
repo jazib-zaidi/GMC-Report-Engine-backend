@@ -71,7 +71,6 @@ exports.createGoogleSheetReport = async (req, res) => {
       'All Products',
       'Insights by Brands',
       ...productType,
-      ...googleProductCategory,
     ];
 
     function formatPercent(value) {
@@ -639,27 +638,6 @@ exports.createGoogleSheetReport = async (req, res) => {
         ...formatTypeSheetData(
           reportData.allProductDataWithImpressions[
             `productTypeL${index + 1}Cohort`
-          ],
-          `segment`
-        ),
-      ];
-
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: `${type}!A1`,
-        valueInputOption: 'RAW',
-        resource: {
-          values: typeSheetData,
-        },
-      });
-    });
-
-    googleProductCategory.forEach(async (type, index) => {
-      const typeSheetData = [
-        [`Google Product Category Level ${index + 1}`, ...productTypeHeader],
-        ...formatTypeSheetData(
-          reportData.allProductDataWithImpressions[
-            `categoryL${index + 1}Cohort`
           ],
           `segment`
         ),
