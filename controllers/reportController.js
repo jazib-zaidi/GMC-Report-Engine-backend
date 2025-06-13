@@ -58,13 +58,24 @@ exports.fetchReports = async (req, res) => {
       return allResults;
     };
 
+    const trafficMode = filter?.traffic?.toLowerCase();
+
+    let traffic = '';
+    if (trafficMode == 'ads') {
+      traffic = `AND segments.program = 'SHOPPING_ADS' `;
+    } else if (trafficMode == 'organic') {
+      traffic = `AND segments.program = 'FREE_PRODUCT_LISTING' `;
+    } else {
+      traffic = '';
+    }
+
     const getAllResults = async (gmcAccountId, startDate, endDate, filter) => {
       let currentQuery = `
         SELECT segments.offer_id,segments.title, segments.brand, ${productType}, ${customLabel},${googleProductCategory},
                metrics.clicks, metrics.impressions, metrics.ctr, metrics.conversions
         FROM MerchantPerformanceView
         WHERE segments.date BETWEEN '${startDate}' AND '${endDate}'
-        AND segments.program = 'FREE_PRODUCT_LISTING' 
+        ${traffic}
       `;
 
       let previousStart, previousEnd;
@@ -87,7 +98,7 @@ exports.fetchReports = async (req, res) => {
                metrics.clicks, metrics.impressions, metrics.ctr, metrics.conversions
         FROM MerchantPerformanceView
         WHERE segments.date BETWEEN '${previousStart}' AND '${previousEnd}'
-          AND segments.program = 'FREE_PRODUCT_LISTING'
+       ${traffic}
       `;
 
       const [current, previous] = await Promise.all([
