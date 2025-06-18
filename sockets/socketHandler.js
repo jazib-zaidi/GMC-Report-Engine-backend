@@ -23,12 +23,12 @@ function initSocket(io) {
         const createResponse = await sheets.spreadsheets.create({
           resource: {
             properties: {
-              title: 'Focus keyword',
+              title: 'Optimized Title',
             },
             sheets: [
               {
                 properties: {
-                  title: 'FocusKeywords',
+                  title: 'Optimized Title',
                 },
               },
             ],
@@ -46,7 +46,7 @@ function initSocket(io) {
         await writeDataToSheet(
           sheets,
           spreadsheetId,
-          'FocusKeywords',
+          'Optimized Title',
           result,
           socket
         );

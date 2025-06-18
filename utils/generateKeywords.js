@@ -2,43 +2,25 @@ require('dotenv').config();
 const OpenAI = require('openai');
 
 function buildPrompt(row, country) {
-  return `
-You are Keyword Researcher GPT. Your primary function is to analyze structured product data and generate the most relevant Focus Keyword that aligns with how a typical buyer in **${country}** would search for that product online.
+  return `You are Product Title Optimizer GPT. Your primary function is to analyze structured product data and generate the most relevant, high-converting **Product Title** that aligns with how a typical buyer in **${country}** would search for that product online.
 
-Special Instructions (if Apparel or Clothing):
-If the product falls under apparel or fashion, make sure the keyword includes:
+Formatting Rules:
+- Return only the optimized **Title**.
+- Use **Title Case** (Capitalize First Letters).
+- Title must be **appealing, search-friendly, and click-enticing**.
+- Do not repeat words or phrases unnecessarily.
+- Avoid generic terms or filler words.
+- Do not include location or country names.
+- if brand in the original title add this in the optimized title to .
+- Focus on terms users actually type into search engines when looking to **buy**.
+- Highlight **key differentiators** (e.g., material, features, compatibility, size, quantity, filing fixtures, closures ) if available.
+- Include a relevant long-tail keyword that reflects specific buyer search behavior.
+- Use how users naturally speak or search.
+- ideally title length would be under 70 characters.
+- Important Do not exceed title length more then 80 characters under any circumstances. and absolutely not more than 110 characters.
 
-Gender
-
-Size
-
-Style
-
-Cut
-
-Pattern or Print
-
-Material
-
-Colour
-
-Closure/Features
-
-These elements must reflect real buyer search behavior—think like someone typing a very specific search to find exactly what they want.
-
-Output:
-Return only the Focus Keyword, written as a natural phrase someone would type into Google when looking to buy that exact product.
-
-
-
-Important Rules:
-Do not create a focused keyword phrase that already appears in the current title as an exact match.
-Do not add descriptive words or phrases to the focused keyword that are not already in the input data.
-All Focus Keywords must be in Title Case.
-Make sure Keywords remail short,
-Keywords must be search-friendly, specific, and reflect actual user search behavior in **${country}**.
-Avoid generic or overly broad keywords.
-Do not include any country or location terms in the keyword.
+Goal:
+To increase click-through rate and sales by creating a **compelling, relevant** product title that resonates with searchers.
 
 Input:
 Title: ${row['Title']}
@@ -54,9 +36,10 @@ Google Product Category 4: ${row['Google Product Category 4'] || ''}
 Google Product Category 5: ${row['Google Product Category 5'] || ''}
 Description: ${row['Description']}
 
-Return only the most relevant Focus Keyword in Title Case. No explanation and make sure no country is included in keyword.
+Return only the **final, optimized Product Title**  Not exceed title length more then 80 characters under any circumstances. in Title Case. No explanation. No country terms.
 `;
 }
+
 const openai = new OpenAI({
   apiKey: process.env.OPEN_AI_KEY,
 });
@@ -146,17 +129,7 @@ async function writeDataToSheet(
       throw new Error('No data to write');
     }
 
-    const headers = [
-      'Item ID',
-      'Title',
-      'Description',
-      'Product Type (1st Level)',
-      'Product Type (2nd Level)',
-      'Product Type (3rd Level)',
-      'Product Type (4th Level)',
-      'Product Type (5th Level)',
-      'Focus Keyword',
-    ];
+    const headers = ['Item ID', 'Title', 'Focus Keyword'];
 
     const rows = data.map((row) => headers.map((header) => row[header]));
     // console.log('from sheet', headers);
