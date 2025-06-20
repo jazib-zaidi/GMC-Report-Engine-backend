@@ -2,42 +2,13 @@ require('dotenv').config();
 const OpenAI = require('openai');
 
 function buildPrompt(row, country) {
-  return `You are Product Title Optimizer GPT. Your primary function is to analyze structured product data and generate the most relevant, high-converting **Product Title** that aligns with how a typical buyer in **${country}** would search for that product online.
+  return `Extract only the colour value from the following metafield JSON. 
 
-Formatting Rules:
-- Return only the optimized **Title**.
-- Use **Title Case** (Capitalize First Letters).
-- Title must be **appealing, search-friendly, and click-enticing**.
-- Do not repeat words or phrases unnecessarily.
-- Avoid generic terms or filler words.
-- Do not include location or country names.
-- if brand in the original title add this in the optimized title to .
-- Focus on terms users actually type into search engines when looking to **buy**.
-- Highlight **key differentiators** (e.g., material, features, compatibility, size, quantity, filing fixtures, closures ) if available.
-- Include a relevant long-tail keyword that reflects specific buyer search behavior.
-- Use how users naturally speak or search.
-- ideally title length would be under 70 characters.
-- Important Do not exceed title length more then 80 characters under any circumstances. and absolutely not more than 110 characters.
+If a colour is present, return just the colour as plain text, like "Red". 
+If no colour is found, return an empty string with no explanation.
 
-Goal:
-To increase click-through rate and sales by creating a **compelling, relevant** product title that resonates with searchers.
-
-Input:
-Title: ${row['Title']}
-Product Type (1st Level): ${row['Product Type (1st Level)'] || ''}
-Product Type (2nd Level): ${row['Product Type (2nd Level)'] || ''}
-Product Type (3rd Level): ${row['Product Type (3rd Level)'] || ''}
-Product Type (4th Level): ${row['Product Type (4th Level)'] || ''}
-Product Type (5th Level): ${row['Product Type (5th Level)'] || ''}
-Google Product Category 1: ${row['Google Product Category 1'] || ''}
-Google Product Category 2: ${row['Google Product Category 2'] || ''}
-Google Product Category 3: ${row['Google Product Category 3'] || ''}
-Google Product Category 4: ${row['Google Product Category 4'] || ''}
-Google Product Category 5: ${row['Google Product Category 5'] || ''}
-Description: ${row['Description']}
-
-Return only the **final, optimized Product Title**  Not exceed title length more then 80 characters under any circumstances. in Title Case. No explanation. No country terms.
-`;
+Metafield:
+${metafield}`;
 }
 
 const openai = new OpenAI({
@@ -58,20 +29,23 @@ async function generateKeywords(socket, rows, country) {
     i++;
     try {
       const res = await openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-4.1-nano',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
       });
       const promptTokens = res.usage.prompt_tokens;
       const completionTokens = res.usage.completion_tokens;
       const tokens = res.usage.total_tokens;
-
+      console.log(res);
+      // nano
+      //$0.10 / 1M tokens
+      //$0.40 / 1M tokens
       totalPromptTokens += promptTokens;
       totalCompletionTokens += completionTokens;
       totalTokens += tokens;
 
-      const promptCost = (promptTokens / 1000) * 0.03;
-      const completionCost = (completionTokens / 1000) * 0.06;
+      const promptCost = (promptTokens / 1_000_000) * 0.1;
+      const completionCost = (completionTokens / 1_000_000) * 0.4;
       totalCost += promptCost + completionCost;
       let keyword = res.choices[0].message.content.trim();
       if (keyword.startsWith('"') && keyword.endsWith('"')) {
