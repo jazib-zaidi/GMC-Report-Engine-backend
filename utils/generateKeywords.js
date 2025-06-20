@@ -40,6 +40,7 @@ async function generateKeywords(socket, rows, country) {
       // nano
       //$0.10 / 1M tokens
       //$0.40 / 1M tokens
+
       totalPromptTokens += promptTokens;
       totalCompletionTokens += completionTokens;
       totalTokens += tokens;
