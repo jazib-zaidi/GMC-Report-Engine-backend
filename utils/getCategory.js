@@ -74,7 +74,11 @@ function groupByOfferId(data) {
   return map;
 }
 
-function getAllCommonProductsWithImpressions(currentData, previousData) {
+function getAllCommonProductsWithImpressions(
+  currentData,
+  previousData,
+  requireImpressions = true
+) {
   const currentGrouped = groupByOfferId(currentData);
   const previousGrouped = groupByOfferId(previousData);
 
@@ -85,15 +89,19 @@ function getAllCommonProductsWithImpressions(currentData, previousData) {
     const previousItems = previousGrouped.get(offerId);
     if (!previousItems) continue;
 
-    // Check if ALL current and ALL previous items have impressions > 0
-    const currentHasImpressions = currentItems.every(
-      (item) => parseInt(item.metrics.impressions, 10) > 0
-    );
-    const previousHasImpressions = previousItems.every(
-      (item) => parseInt(item.metrics.impressions, 10) > 0
-    );
+    let include = true;
 
-    if (currentHasImpressions && previousHasImpressions) {
+    if (requireImpressions) {
+      const currentHasImpressions = currentItems.every(
+        (item) => parseInt(item.metrics.impressions, 10) > 0
+      );
+      const previousHasImpressions = previousItems.every(
+        (item) => parseInt(item.metrics.impressions, 10) > 0
+      );
+      include = currentHasImpressions && previousHasImpressions;
+    }
+
+    if (include) {
       filteredCurrent.push(...currentItems);
       filteredPrevious.push(...previousItems);
     }
