@@ -24,10 +24,7 @@ exports.fetchReports = async (req, res) => {
     oauth2Client.setCredentials(tokens);
     const content = google.content({ version: 'v2.1', auth: oauth2Client });
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    let withImpression = filter?.withImpressions;
-    if (withImpression == undefined) {
-      withImpression = false;
-    }
+    let withImpression = true;
 
     const fetchAllDataRecursively = async (
       gmcAccountId,
@@ -96,30 +93,13 @@ exports.fetchReports = async (req, res) => {
         previousStart = prevStart.toISOString().split('T')[0];
         previousEnd = prevEnd.toISOString().split('T')[0];
       }
-      let previousEndFormatted = previousEnd;
-      let previousStartFormatted = previousStart;
-      let newTraffic = '';
-
-      if (!withImpression && trafficMode !== 'organic' && traffic !== 'ads') {
-        const startDate = new Date(previousStart);
-        const endDate = new Date(previousEnd);
-
-        const diffInMs = endDate - startDate;
-        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-        // Shift start forward by 27% of the time range (e.g., 8 days if 30 total days)
-        const shiftDays = Math.floor(diffInDays * 0.08); // You can tweak 0.15 as needed
-
-        startDate.setDate(startDate.getDate() + shiftDays);
-        previousStartFormatted = startDate.toISOString().split('T')[0];
-      }
 
       let previousQuery = `
   SELECT segments.offer_id,  segments.title, segments.brand, ${productType}, ${customLabel},
          metrics.clicks, metrics.impressions, metrics.ctr, metrics.conversions
   FROM MerchantPerformanceView
-  WHERE segments.date BETWEEN '${previousStartFormatted}' AND '${previousEnd}'
-  ${newTraffic}
+  WHERE segments.date BETWEEN '${previousStart}' AND '${previousEnd}'
+  ${traffic}
 `;
 
       const [current, previous] = await Promise.all([
