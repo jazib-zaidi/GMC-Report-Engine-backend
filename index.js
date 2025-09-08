@@ -14,6 +14,7 @@ const uploadXml = require('./routes/uploadXmlFile');
 const userRoutes = require('./routes/user');
 const feedXml = require('./routes/feedXml');
 const lia = require('./routes/lia');
+const auditFeed = require('./routes/audit');
 const googleProductCategory = require('./routes/googleProductCategory');
 const authMiddleware = require('./middlewares/authMiddleware');
 const { initSocket } = require('./sockets/socketHandler');
@@ -75,6 +76,7 @@ app.use('/api', uploadXml);
 app.use('/api', googleProductCategory);
 app.use('/api', feedXml);
 app.use('/api', lia);
+app.use('/api', auditFeed);
 
 // Test Route
 app.get('/test', authMiddleware, (req, res) => {

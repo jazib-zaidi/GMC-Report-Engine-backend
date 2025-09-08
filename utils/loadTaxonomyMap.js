@@ -13,4 +13,8 @@ const loadTaxonomyMap = () => {
   }
   return map;
 };
-module.exports = { loadTaxonomyMap };
+
+function formatNumber(num) {
+  return num.toLocaleString();
+}
+module.exports = { loadTaxonomyMap, formatNumber };
