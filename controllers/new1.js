@@ -1,15 +1,18 @@
 // controllers/googleProductsAudit.js
 const { oauth2Client, google } = require('../utils/googleClient');
+const { findMissingGMCAttributes } = require('../utils/AiQueryGeneration');
 
 /**
  * Fetch ALL productstatuses via Content API v2.1 (recursive pagination)
  */
-async function fetchAllProductStatuses(content, merchantId) {
+async function fetchAllProductStatuses(content, merchantId, { delay = 0 }) {
   let allItems = [];
   let pageToken = null;
 
   do {
-    const res = await content.productstatuses.list({
+    if (delay) await new Promise((r) => setTimeout(r, delay));
+
+    const res = await content.products.list({
       merchantId,
       pageToken: pageToken || undefined,
       maxResults: 250,
@@ -18,6 +21,7 @@ async function fetchAllProductStatuses(content, merchantId) {
     const items = res?.data?.resources || [];
     allItems.push(...items);
     pageToken = res?.data?.nextPageToken || null;
+    console.log(pageToken);
   } while (pageToken);
 
   return allItems;
@@ -69,7 +73,9 @@ exports.googleProductsAudit = async (req, res) => {
     };
 
     // Fetch ALL pages
-    const items = await fetchAllProductStatuses(content, gmcAccountId);
+    // const items = await fetchAllProductStatuses(content, gmcAccountId, {
+    //   delay: delayMs,
+    // });
 
     // to get product add products.list
 
@@ -77,27 +83,15 @@ exports.googleProductsAudit = async (req, res) => {
     //   merchantId: gmcAccountId,
     // });
     // console.log(prod);
-    function formatDate(date) {
-      return date.toISOString().split('T')[0]; // YYYY-MM-DD
-    }
-
-    const end = new Date(); // today
-    const start = new Date();
-    start.setDate(end.getDate() - 30); // go back 30 days
-
-    console.log(start);
-    console.log(end);
     let query = `
         SELECT segments.offer_id,segments.title, segments.brand,
                metrics.clicks, metrics.impressions
         FROM MerchantPerformanceView
-        WHERE segments.date BETWEEN '${formatDate(start)}' AND '${formatDate(
-      end
-    )}'
+        WHERE segments.date BETWEEN '2025-09-01' AND '2025-09-30'
       `;
     const response = await fetchAllDataRecursively(gmcAccountId, query);
 
-    console.log(response);
+    // console.log(response);
     // for (let i = 0; i < (prod.data.resources || []).length; i++) {
     //   const missingAttributes = await findMissingGMCAttributes(
     //     prod.data.resources[i]
@@ -110,13 +104,15 @@ exports.googleProductsAudit = async (req, res) => {
     // const items = await fetchAllProductStatuses(content, gmcAccountId, {
     //   delay: delayMs,
     // });
+    const items = [];
 
     return res.json({
       message: 'Fetched all product statuses',
       merchantId: gmcAccountId,
       totalItems: items.length,
-      itemStatus: items,
-      productMetrics: response,
+      // total: response.length,
+      // itemStatus: prod,
+      response,
     });
   } catch (err) {
     console.error('Error in googleProductsAudit handler:', err);

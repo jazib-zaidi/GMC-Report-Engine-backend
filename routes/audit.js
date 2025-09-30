@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 
-const { auditFeedController } = require('../controllers/auditFeedController');
+const { googleProductsAudit } = require('../controllers/auditFeedController');
 
 const authMiddleware = require('../middlewares/authMiddleware');
 
-router.post('/audit-feed', authMiddleware, auditFeedController);
+router.get('/audit-feed', authMiddleware, googleProductsAudit);
 
 module.exports = router;

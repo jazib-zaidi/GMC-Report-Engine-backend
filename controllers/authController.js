@@ -15,7 +15,7 @@ exports.handleOAuthCallback = async (req, res) => {
   try {
     const { code } = req.query;
     const { tokens } = await oauth2Client.getToken(code);
-
+    console.log(tokens);
     if (!tokens) {
       return res.status(400).json({ message: 'No tokens received', code });
     }

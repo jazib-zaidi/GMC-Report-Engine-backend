@@ -1,82 +1,82 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const fs = require('fs');
-const csv = require('csv-parser');
 const { Parser } = require('json2csv');
-const OUTPUT_CSV = 'mapped_products.csv';
+
 // 👇 Replace with the actual path to your model
 const GoogleProductCategory = require('./models/GoogleProductCategory');
 
-const INPUT_CSV = 'products.csv';
-// must include id
-async function loadCsv(filePath) {
-  return new Promise((resolve, reject) => {
-    const results = [];
-    fs.createReadStream(filePath)
-      .pipe(csv())
-      .on('data', (data) => results.push(data))
-      .on('end', () => resolve(results))
-      .on('error', reject);
-  });
-}
+const OUTPUT_CSV = 'mapped_products.csv';
+
+// Prefer env var; falls back to hardcoded string if present
 const mongoURI =
+  process.env.MONGO_URI ||
   'mongodb+srv://jazib:lErsVQiCpmh9UoEb@GMC-report.lnh9lfy.mongodb.net/GMC-report?retryWrites=true&w=majority&appName=GMC-Report';
 
 (async () => {
   try {
-    // 1. Connect to MongoDB
+    // 1) Connect to MongoDB
     await mongoose.connect(mongoURI);
     console.log('✅ Connected to MongoDB');
 
-    // Optional: test fetching 1 record to ensure the model is working
-    const test = await GoogleProductCategory.findOne();
-    console.log('Sample category record:', test);
-    const products = await loadCsv(INPUT_CSV);
-    const offerIds = products.map((p) => p['Item ID']).filter(Boolean);
+    // 2) Fetch category docs (adjust the filter if you need a subset)
     const categoryDocs = await GoogleProductCategory.find({
-      offerId: { $in: offerIds },
-    }).lean(); // lean gives plain JS objects
-    console.log(
-      `🔎 Found ${categoryDocs.length} matching categories from MongoDB`
-    );
-    const categoryMap = {};
-    for (const doc of categoryDocs) {
-      categoryMap[doc.offerId] = doc;
-    }
+      merchantId: 8535782,
+    }).lean();
 
-    const merged = products.map((product) => {
-      const offerId = product['Item ID'];
-      const cat = categoryMap[offerId] || {};
+    console.log(`🔎 Loaded ${categoryDocs.length} docs`);
+    console.log(categoryDocs);
+    // 3) Build report rows straight from Mongo
+    const rows = categoryDocs.map((doc) => {
+      const parts = [
+        doc.categoryL1,
+        doc.categoryL2,
+        doc.categoryL3,
+        doc.categoryL4,
+        doc.categoryL5,
+      ].filter((p) => p && String(p).trim().toLowerCase() !== 'empty');
 
-      const categoryParts = [
-        cat.categoryL1,
-        cat.categoryL2,
-        cat.categoryL3,
-        cat.categoryL4,
-        cat.categoryL5,
-      ].filter((part) => part && part.trim().toLowerCase() !== 'empty');
-      console.log(categoryParts);
-      const categoryPath = categoryParts.join(' > ');
+      const categoryPath = parts.join(' > ');
 
+      // Return whatever fields you want in your report:
       return {
-        ...product,
-        categoryPath: categoryPath || '',
+        offerId: doc.offerId || '',
+        // Include raw levels if useful:
+        categoryL1: doc.categoryL1 || '',
+        categoryL2: doc.categoryL2 || '',
+        categoryL3: doc.categoryL3 || '',
+        categoryL4: doc.categoryL4 || '',
+        categoryL5: doc.categoryL5 || '',
+        // Nice combined path:
+        categoryPath,
+        // Add other fields from your schema as needed:
+        // title: doc.title || '',
+        // merchantId: doc.merchantId || '',
+        // updatedAt: doc.updatedAt || '',
       };
     });
 
-    const fields = Object.keys(merged[0]); // include all fields dynamically
+    if (rows.length === 0) {
+      console.log('⚠️ No documents found to write.');
+      await mongoose.connection.close();
+      process.exit(0);
+    }
+
+    // 4) Write CSV
+    const fields = Object.keys(rows[0]);
     const parser = new Parser({ fields });
-    const csvData = parser.parse(merged);
+    const csvData = parser.parse(rows);
 
     fs.writeFileSync(OUTPUT_CSV, csvData);
-    console.log(`✅ Mapped data written to ${OUTPUT_CSV}`);
+    console.log(`✅ Report written to ${OUTPUT_CSV}`);
+    console.log('🧩 Sample rows:', rows.slice(0, 3));
 
-    console.log('🧩 Merged sample:', merged.slice(0, 3)); // show first few
-    mongoose.connection.close();
+    await mongoose.connection.close();
   } catch (err) {
-    console.error('❌ Error connecting to MongoDB:', err);
-    mongoose.connection.close();
+    console.error('❌ Error:', err);
+    try {
+      await mongoose.connection.close();
+    } catch {}
+    process.exit(1);
   }
 })();
-
-// 👇 Adjust the path/filename to match your actual CSV
