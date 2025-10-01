@@ -14,5 +14,6 @@ module.exports = {
     'https://www.googleapis.com/auth/drive.file',
     'https://www.googleapis.com/auth/business.manage',
     'https://www.googleapis.com/auth/adwords',
+    'https://www.googleapis.com/auth/spreadsheets',
   ],
 };
