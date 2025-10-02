@@ -16,7 +16,7 @@ exports.bestSellerProducts = async (req, res) => {
 
     const customer = client.Customer({
       customer_id,
-      login_customer_id: '5956407828',
+      login_customer_id: process.env.LOGIN_CUSTOMER_ID,
       refresh_token: tokens.refresh_token,
     });
 
@@ -39,14 +39,13 @@ exports.bestSellerProducts = async (req, res) => {
 
     const rows = await customer.query(query);
 
-    // Aggregate conversions per product
     const productMap = {};
     rows.forEach((row) => {
-      const id = row.segments.product_item_id;
+      const id = row.segments?.product_item_id;
       if (!productMap[id]) {
         productMap[id] = {
           product_id: id,
-          product_title: row.segments.product_title,
+          product_title: row.segments?.product_title,
           conversions: 0,
           revenue: 0,
           custom_label: '',
@@ -54,29 +53,26 @@ exports.bestSellerProducts = async (req, res) => {
       }
       productMap[id].conversions += row.metrics.conversions || 0;
       productMap[id].revenue += row.metrics.conversions_value || 0;
-      productMap[id].custom_label = 'Top 50 Best-Selling Products';
+      productMap[
+        id
+      ].custom_label = `Top ${req.query.limit} Best-Selling Products`;
     });
 
-    // Convert to array and sort by conversions
     const sorted = Object.values(productMap).sort(
       (a, b) => b.conversions - a.conversions
     );
 
-    // Top N (default 50)
     const topN = req.query.limit ? parseInt(req.query.limit, 10) : 50;
     const topProducts = sorted.slice(0, topN);
 
-    // ✅ Write to Google Sheets (if sheet_id provided)
     if (sheet_id) {
       const sheets = google.sheets({ version: 'v4', auth: oauth2Client });
 
-      // Clear old data
       await sheets.spreadsheets.values.clear({
         spreadsheetId: sheet_id,
         range: 'Sheet1!A:Z',
       });
 
-      // Prepare data (header + rows)
       const values = [
         [
           'Product ID',
@@ -94,7 +90,6 @@ exports.bestSellerProducts = async (req, res) => {
         ]),
       ];
 
-      // Push data
       await sheets.spreadsheets.values.update({
         spreadsheetId: sheet_id,
         range: 'Sheet1!A1',
@@ -104,7 +99,7 @@ exports.bestSellerProducts = async (req, res) => {
     }
 
     res.json({
-      msg: 'ok',
+      msg: 'success',
       top_products: topProducts,
     });
   } catch (error) {

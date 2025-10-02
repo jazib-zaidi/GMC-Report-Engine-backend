@@ -44,7 +44,7 @@ exports.lia = async (req, res) => {
 
     const customer = client.Customer({
       customer_id: adsAccountId, // Your manager account ID
-      login_customer_id: '5956407828',
+      login_customer_id: process.env.LOGIN_CUSTOMER_ID,
       refresh_token: tokens.refresh_token,
     });
 
@@ -230,7 +230,7 @@ exports.liaStoreData = async (req, res) => {
     const taxonomyMap = loadTaxonomyMap();
     const customer = client.Customer({
       customer_id: adsAccountId, // Your manager account ID
-      login_customer_id: '5956407828',
+      login_customer_id: process.env.LOGIN_CUSTOMER_ID,
       refresh_token: tokens.refresh_token,
     });
 
@@ -326,7 +326,7 @@ exports.AiInsigth = async (req, res) => {
 
     const customer = client.Customer({
       customer_id: adsAccountId, // Your manager account ID
-      login_customer_id: '5956407828',
+      login_customer_id: process.env.LOGIN_CUSTOMER_ID,
       refresh_token: tokens.refresh_token,
     });
     const extractCategoryId = (resourceName) => {

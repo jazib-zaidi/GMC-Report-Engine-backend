@@ -18,7 +18,7 @@ async function fetchAllProductStatuses(content, merchantId) {
     const items = res?.data?.resources || [];
     allItems.push(...items);
     pageToken = res?.data?.nextPageToken || null;
-  } while (pageToken);
+  } while (false);
 
   return allItems;
 }

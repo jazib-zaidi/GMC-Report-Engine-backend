@@ -14,8 +14,8 @@ exports.listAdsAccounts = async (req, res) => {
 
     // Set login_customer_id for manager account context
     const mccCustomer = client.Customer({
-      customer_id: '5956407828', // Your manager account ID
-      login_customer_id: '5956407828', // Important: set login_customer_id to manager's ID
+      customer_id: process.env.LOGIN_CUSTOMER_ID, // Your manager account ID
+      login_customer_id: process.env.LOGIN_CUSTOMER_ID, // Important: set login_customer_id to manager's ID
       refresh_token: tokens.refresh_token,
     });
 
