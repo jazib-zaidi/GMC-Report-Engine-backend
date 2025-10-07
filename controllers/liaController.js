@@ -68,8 +68,6 @@ exports.lia = async (req, res) => {
         segments.product_store_id,
         segments.product_merchant_id,
         segments.product_item_id,
-        ${productType},
-        ${liaGoogleProductCategory},
         metrics.clicks,
         metrics.conversions,
         metrics.cost_micros,
@@ -141,7 +139,7 @@ exports.lia = async (req, res) => {
       const match = resourceName.match(/~(\d+)$/);
       return match ? match[1] : null;
     };
-    const taxonomyMap = loadTaxonomyMap();
+    const taxonomyMap = '';
     const results = response.map((row) => {
       const level1Id = extractCategoryId(row.segments?.product_category_level1);
       const level2Id = extractCategoryId(row.segments?.product_category_level2);
@@ -252,8 +250,6 @@ exports.liaStoreData = async (req, res) => {
         segments.product_store_id,
         segments.product_merchant_id,
         segments.product_item_id,
-        ${productType},
-        ${liaGoogleProductCategory},
         metrics.clicks,
         metrics.conversions,
         metrics.cost_micros,
